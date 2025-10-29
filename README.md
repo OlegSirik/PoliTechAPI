@@ -13,7 +13,7 @@ A Spring Boot application for managing insurance policies with advanced number g
 ## Requirements
 
 - Java 17+
-- Maven 3.8+
+- Gradle 8.7+ (wrapper included)
 - PostgreSQL 13+
 
 ## Quick Start
@@ -38,7 +38,7 @@ createdb pt_db
 
 3. Build and run:
 ```bash
-mvn spring-boot:run
+./gradlew bootRun
 ```
 
 App listens on `http://localhost:8080`.
@@ -149,6 +149,26 @@ DB_HOST=localhost  # Database host (default: localhost)
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/pt_db
 SPRING_DATASOURCE_USERNAME=spring
 SPRING_DATASOURCE_PASSWORD=spring
+```
+
+### Database Migrations
+
+This project uses **Liquibase** for database schema management. Migrations run automatically on application startup.
+
+**Key Features:**
+- Automatic schema versioning and tracking
+- Built-in rollback support
+- Database-agnostic change definitions
+- Support for XML, YAML, JSON, and SQL formats
+
+**Documentation:**
+- See `LIQUIBASE_SETUP.md` for complete Liquibase documentation
+- See `MIGRATION_FROM_FLYWAY.md` for migration history from Flyway
+
+**Quick Commands:**
+```bash
+./gradlew bootRun                 # Start application (Flyway runs automatically)
+./gradlew build                   # Build with migrations
 ```
 
 ### Docker Configuration

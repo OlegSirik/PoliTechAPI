@@ -23,18 +23,15 @@ public class AdminFileController {
 
     // POST /admin/files body json
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createMeta(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, String>> createMeta(@RequestBody Map<String, String> body) {
         String fileType = body.get("fileType").toLowerCase();
         String fileDesc = body.get("fileDescription");
         String productCode = body.get("productCode");
-        FileEntity e = fileService.createMeta(fileType, fileDesc, productCode);
-        Map<String, Object> resp = Map.of(
-                "id", e.getId(),
-                "fileType", e.getFileType(),
-                "fileDescription", e.getFileDesc(),
-                "productCode", e.getProductCode()
-        );
-        return ResponseEntity.ok(resp);
+        Integer packageCode = Integer.parseInt(body.get("packageCode"));
+        FileEntity e = fileService.createMeta(fileType, fileDesc, productCode, packageCode);
+
+        body.put("id", String.valueOf(e.getId()));
+        return ResponseEntity.ok(body);
     }
 
     // POST /admin/files/{id} multipart file upload
@@ -72,7 +69,7 @@ public class AdminFileController {
     public ResponseEntity<byte[]> process(@PathVariable("id") Long id, @RequestBody List<Map<String, String>> pairs) {
         java.util.Map<String, String> kv = new java.util.HashMap<>();
         for (Map<String, String> p : pairs) {
-            kv.put(p.get("key"), p.get("value"));
+            kv.put(p.get("varCode"), p.get("varValue"));
         }
         byte[] bytes = fileService.process(id, kv);
         return ResponseEntity.ok()

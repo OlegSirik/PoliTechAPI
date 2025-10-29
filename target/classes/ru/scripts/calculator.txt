@@ -1,275 +1,196 @@
-Глоссарий
-
-Срок действия договора
-
-Contract Term / Duration
-
-Определение: Общая продолжительность договора в единицах времени (например, 12 месяцев).
-
-Пример: "Срок действия договора составляет 1 год".
-
-Период действия договора
-
-Policy Period / Coverage Period
-
-Определение: Конкретные даты начала и окончания действия договора.
-
-Пример: "Период действия договора: с 01.01.2025 по 31.12.2025".
-
-Срок активации договора
-
-Activation Term / Waiting Period
-
-Определение: Количество дней между датой продажи и датой начала действия договора.
-
-Пример: "Срок активации договора — 7 календарных дней".
-
-Период активации договора
-
-Activation Period
-
-Определение: Временной промежуток, в течение которого допускается активация договора/услуги.
-
-Пример: "Период активации договора — до 30 дней после заключения договора".
-
-Дата начала действия договора
-
-Effective Date / Start Date
-
-Определение: Конкретная календарная дата, когда договор вступает в силу.
-
-Пример: "Дата начала действия договора — 01.02.2025".
-
-Дата окончания действия договора
-
-Expiry Date / End Date
-
-Определение: Конкретная календарная дата, когда договор прекращает своё действие.
-
-Пример: "Дата окончания действия договора — 31.01.2026".
-
-Дата начала действия условия договора (покрытия)
-
-Coverage Effective Date
-
-Определение: Дата, с которой начинает действовать конкретное условие (покрытие) договора. Может отличаться от даты начала действия всего договора.
-
-Пример: "Медицинское покрытие вступает в силу с 15.02.2025, при том что договор начал действовать с 01.02.2025".
-
-Продолжительность действия условия договора (покрытия)
-
-Coverage Duration / Coverage Term
-
-Определение: Длительность, на которую распространяется конкретное покрытие. Может быть меньше или равна сроку всего договора.
-
-Пример: "Покрытие по риску 'Несчастный случай' действует 6 месяцев в рамках годового договора".
-
-Период ожидания покрытия
-
-Waiting Period / Deferred Period / Qualifying Period
-delay Period
-
-Определение: Временной промежуток между датой начала действия договора и датой начала действия конкретного покрытия.
-
-Пример: "Для покрытия по риску 'Госпитализация' установлен период ожидания 30 дней: договор действует с 01.02.2025, но само покрытие начинает действовать с 01.03.2025".
-
- 
-
- 
-
-Договор состоит из шапки ( стандартна часть ) и линии бизнеса. Теоретически может быть несколько линий бизнеса в одном договоре, но встречается редко и не будет пока рассматриваться.
-
-Даты договора
-
-createDate
-
-дата создания полиса в системе страховщика.
-
-sysdate, now()
-
-issueDate
-
-дата продажи полиса. заполняется партнером
-
-обычно сегодня
-
-startDate
-
-дата начала действия договора
-
-период активации 
-
-endDate
-
-дата окончания действия  договора
-
-срок действия договора
-
-дата оплаты
-
-в п2 не используется
-
-дата расторжения
-
-в п2 не используется
-
-cover.startDate
-
-P0D
-
-период ожидания 
-
-cover.endDate
-
-срок покрытия
-
-Настройка продукта и проверка дат
-
-Таймзона берется из issueDate - дата и время продажи полиса партнером. Для онлайн продажи, проверяем что время отстает не более чем на ( 5 минут ? ).
-Далее startDate и endDate приводятся к этой таймзоне. Это позволит корректно обрабатывать условия, когда договор начинает действовать с какойто даты. 
-И начинает действовать с этой даты в указанной таймзоне, а не в Москве или в UTC0. 
-
-1.       период активации. период между продажей и датой начала действия договора. для страхования техники используется фиксированный период 16 дней, для НС от 1 дня до 365.
-Из настройки договора получаем список доступных периодов.
-Если он не пустой, то
-  если в списке только одно значение, то
-    переданная startDate, если есть, игнорируется. startDate = issueDate + activationPeriod.
-  если в списке несколько значений, то
-    activationPeriod = startDate - issueDate, и далее проверка по списку
-  если список пустой, то 
-    activationPeriod = startDate - issueDate
-    далее проверяется что activationPeriod меньше или равно макс периода, и больше или равно мин периоду. 
-
-2.       срок действия договора . Количество дней\месяцев\лет действия договора страхования. Обычно фиксированное значение равное 1 году, но могут быть нюансы.
-Из настройки договора получаем список доступных значений.
-Если список не пустой и содержит 1 значение, то это единственно допустимое значение. endDate, если было передано, игнорируется и рассчитывается как startDate + policyTerm
-  если в списке несколько значений, то
-    policyTerm = endDate - startDate, и далее проверка по списку
-  если список пустой, то 
-    policyTerm = endDate - startDate
-    далее проверяется чтоpolicyTerm меньше или равно макс периода, и больше или равно мин периоду. 
-
-3.       cover.delayPeriod - если задан, то cover.startDate = startDate + cover.delayPeriod
-если cover.delayPeriod пустой, то cover.startDate = startDate
-
-4.       cover.coverageTerm - если указан, то cover.endDate = cover.startDate + cover.coverageTerm
-если cover.coverageTerm не указан, то cover.endDate = policy.endDate
-
-Нормализация списка покрытий
-
-В рамках продукта-пакета указывается список покрытий, входящих в это продукт. Покрытия могут быть обязательные и опциональные. 
-Для того, чтобы в ответе было опциональное покрытие, его нужно явно указать в запросе.
-Обязательные покрытия, если их нет в запросе, будут добавляться к ответу. 
-
-Алгоритм - 
-
-получить по коду продукта и пакета его описание. если пакет не указан, то на предрассчет можно посчитать все пакеты, а на создание договора брать обязательный пакет с кодом 0.
-достать список обязательный покрытий по пакету. если покрытие в запросе есть, то установить даты начала и окончания покрытия, согласно описанию выше.
-если покрытия нет, то добавить его и также установить даты.
-
-далее получить список покрытий из договора, и проверить что такое покрытие применимо к выбранному продукту.
-если нет, то удалить его из списка.
-
-Пример запроса
+Data object -
 
 {
-  "product": {
-    "code": "ACCIDENT_INSURANCE"
-  },
-  "startDate": "2024-09-11T00:00:00+03:00",
-  "endDate": "2025-09-11T23:59:59+03:00",
-  "issueDate": "2024-09-10T14:49:00+03:00",
-  "insuredObject": {
-    "packageCode": "6",
-    "insureds": [
-      {
-        "person": {
-          "birthDate": "1993-01-01",
-          "gender": "M"
-        }
-      }
-    ],
-    "covers": [
-      {
-        "sumInsured": 30300000
-      }
-    ],
-    "additionalProperties": {
-      "discountKVPercent": 20
-    }
-  }
+  "id": "string",
+  "productId": "string",
+  "productCode": "string",
+  "versionNo": "string",
+  "packageNo": "string",
+  "vars": [
+    {
+      "varCode": "ph_firstname",
+      "varName": "Имя страхователя",
+      "varPath": "policyHolder.person.firstName",
+      "varType": "IN",
+      "varValue": "string"
+    }
+  ],
+  "formulas": [
+    {
+      "varCode": "ph_firstname",
+      "varName": "Имя страхователя",
+      "lines": [
+        {
+          "nr": "string",
+          "conditionLeft": {
+            "varCode": "ph_firstname",
+            "varName": "Имя страхователя"
+          },
+          "conditionOperator": "string",
+          "conditionRight": {
+            "varCode": "ph_firstname",
+            "varName": "Имя страхователя"
+          },
+          "expressionResult": {
+            "varCode": "ph_firstname",
+            "varName": "Имя страхователя"
+          },
+          "expressionLeft": {
+            "varCode": "ph_firstname",
+            "varName": "Имя страхователя"
+          },
+          "expressionOperator": "*",
+          "expressionight": {
+            "varCode": "ph_firstname",
+            "varName": "Имя страхователя"
+          },
+          "postProcessor": "string"
+        }
+      ]
+    }
+  ],
+  "coefficients": [
+    {
+      "varCode": "ph_firstname",
+      "varName": "Имя страхователя",
+      "columns": [
+        {
+          "varCode": "ph_firstname",
+          "varName": "Имя страхователя",
+          "nr": "string",
+          "conditionOperator": "string",
+          "sortOrder": "string"
+        }
+      ]
+    }
+  ]
 }
 
-Пример ответа
+ 
 
+
+create repository for this data object with name pt_calculators
+columns (
+  id - number, primary key
+  productId - number not null
+  productCode - number not null
+  versionNo - number not null
+  packageNo - number not null
+  calculator - jsonb
+id must be generated before insert, then update ID in json
+productId, productCode, versionNo, packageNo take from json
+
+create service CalculateService
+
+create Calculator controller
+add get endpoint "/admin/products/{productId}/versions/{versionNo}/packages/{packageNo}/calculator"
+call service and returns json from repository by parameters
+
+add Post endpoint "/admin/products/{productId}/versions/{versionNo}/packages/{packageNo}/calculator"
+check that no calculator exists for the parameters
+if not then create record in reporsitory with empty json and return json in response 
+empty json
 {
-  "product": {
-    "code": "ACCIDENT_INSURANCE"
-  },
-  "startDate": "2024-09-11T00:00:00+03:00",
-  "endDate": "2025-09-11T23:59:59+03:00",
-  "issueDate": "2024-09-10T14:49:00+03:00",
-  "insuredObject": {
-    "packageCode": "6",
-    "insureds": [
-      {
-        "person": {
-          "birthDate": "1993-01-01",
-          "gender": "M"
-        }
-      }
-    ],
-"covers": [
-  {
-    "cover": {
-      "code": "ACCIDENT_DEATH"
-    },
-    "risk": ["ACCIDENT_DEATH"],
-    "startDate": "2023-09-01T00:00:00+03:00",
-    "endDate": "2024-09-01T23:59:59+03:00",
-    "sumInsured": 5 000 000,
-    "premium": 859 273
-   },
-   {
-    "cover": {
-      "code": "ACCIDENT_DISABILITY"
-    },
-    "risk": ["ACCIDENT_DISABILITY"],
-    "startDate": "2023-09-01T00:00:00+03:00",
-    "endDate": "2024-09-01T23:59:59+03:00",
-    "sumInsured": 5 000 000,
-    "premium": 859 273
-  },
-  {
-   "cover": {
-      "code": "DISEASE_DEATH"
-    },
-    "risk": ["DISEASE_DEATH"],
-    "startDate": "2023-09-01T00:00:00+03:00",
-    "endDate": "2024-09-01T23:59:59+03:00",
-    "sumInsured": 25 000 000,
-    "premium": 1 288 910
-   },
-  {
-   "cover": {
-      "code": "DISEASE_DISABILITY"
-    },
-    "risk": ["DISEASE_DISABILITY"],
-    "startDate": "2023-09-01T00:00:00+03:00",
-    "endDate": "2024-09-01T23:59:59+03:00",
-    "sumInsured": 25 000 000,
-    "premium": 1 288 910
-  },
-  {
-   "cover": {
-      "code": "JOB_LOSS "
-    },
-    "risk": ["JOB_LOSS"],
-    "startDate": "2023-09-01T00:00:00+03:00",
-    "endDate": "2024-09-01T23:59:59+03:00",
-    "sumInsured": 300 000,
-    "premium": 9 990
-  }
-]
+  "id": "string",
+  "productId": "string",
+  "productCode": "string",
+  "versionNo": "string",
+  "packageNo": "string",
+  "vars": [],
+  "formulas": [],
+  "coefficients": []
+}
 
- 
+
+
+
+
+
+
+
+// Step 2 //
+
+add Put endpoint "/admin/products/{productId}/versions/{versionNo}/packages/{packageNo}/calculator"
+replace data with new on
+
+
+coefficientData JSON - 
+{ "id": 2345,
+  "conditionValue": ["234.33", "56666", "DEVICE", "12"],
+  "resultValue": "0.12"
+} 
+
+coefficientTable JSON -
+   [ coefficientData ]
+
+create a repository coefficient_data (id sequence,
+  calculator_id number, coefficient_code string, col0 string, col1 string,col2 string,col3 string,col4 string,col5 string,col6 string,col7 string,col8 string,col9 string,col10 string,resultValue number)
+
+create service with methods 
+1. insert new record - takes calculator_id, coefficient_code, coefficientData JSON, resultValue. 
+generate id from sequence, split array to columns like col0 = conditionValue[0], col1 = conditionValue[1] and so on. 
+2. update repository by id. update only col0..col9 and resultValue
+3. delete decord by id
+4. get record by id
+5 . get records as json array by calculator_id, coefficient_code.  select all records with calculator_id, coefficient_code
+order by col1,col2,col3,col4,col5 and put it to "data". return coefficientTable JSON
+6. replace coefficientTable JSON by calculator_id, coefficient_code. delete all record with calculator_id, coefficient_code, insert new data
+
+create methods in AdminCalculatorController methods
+get /admin/calculator/{calculator_id}/coefficients/{coefficient_code}
+call service method, returns all records of coefficient. from pp 5
+
+post /admin/calculator/{calculator_id}/coefficients/{coefficient_code}
+check if any record with calculator_id, coefficient_code exists then return error
+if not, insert all records
+
+put /admin/calculator/{calculator_id}/coefficients/{coefficient_code}
+replace all records with calculator_id, coefficient_code
+
+
+// step3 //
+create domain model in package calculator from the json  from this file
+
+
+// step 4
+
+JdbcTemplate  must be used to data acsses
+Do not use java.sql directly
+
+in coefficientService create method String getCoefficientValue(calculatorId, coefficientCode, map<String, String>, List<CoefficientColumn> )
+bild SQL string and order_by string
+make a loop by List<CoefficientColumn> 
+  take varCode, nr, conditionOperator,sortOrder 
+  varValue = get value from map<String, String> by key varCode. if key not found return null;
+  SQL_string += "AND COL"+ nr +  conditionOperator + varValue
+  if sortOrder = ASC or DESC then order_by_string += "COL"+nr + sordOrder
+final SQL_string = "select result_value from coefficient_data where calculator_id = calculatorId and coefficient_code = coefficientCode " + SQL_string
+of order_by_string != "" then sql_string += order by string
+make sql call with sql_string
+return first record result_value
+when no data found or other exception then return null;
+
+
+
+//step 5
+
+create method runCalculator(Long productId, Integer versionNo, Integer packageNo, Map<String,String>) in CalculatorServise
+ get CalculatorModel with getCalculatorModel(Long productId, Integer versionNo, Integer packageNo) 
+ make loop by Map 
+   find varDef in calculatorModels.vars by key, if found then set varValue to value from map
+get  formulas [0]
+make loop by lines order by nr acs
+for each row if conditionLeft and conditionOperator is not null then calculate boolean result for (conditionLeft  conditionOperator)
+or (conditionLeft conditionOperator  conditionRight) if conditionRight is not empty
+if result is false then go to next iteration
+
+get valueLft from Map by key = expressionLeft
+if expressionRight is not null then get valueRight from Map by key = expressionRight
+result = valueLeft expressionOperator expressionRight
+if postProcessor is not null then switch by name and call function, for instance round2(result) rounds to 2 digits
+
+put result by key = expressionResult into Map
+
+conditionLeft, conditionRight, valueLeft and valueRight may be number or string.
+
+create end point test/main2 in TestControler to test this method

@@ -85,7 +85,12 @@ public class NumberGeneratorService {
             } else if (key.matches("X+")) {
                 // Handle any number of X's as sequence number (XXXX, XXX, XX, etc.)
                 int xCount = key.length();
-                replacement = String.format("%0" + xCount + "d", ng.getCurrentValue());
+                Integer currentValue = ng.getCurrentValue();
+                if (ng.getXorMask() != null && ng.getXorMask().length() > 0) {
+                    currentValue = currentValue ^ Integer.parseInt(ng.getXorMask());
+                }
+                replacement = String.format("%0" + xCount + "d", currentValue);
+                
             } else {
                 // Get value from provided map
                 replacement = values.getOrDefault(key, "");
@@ -130,6 +135,7 @@ public class NumberGeneratorService {
         existing.setMaxValue(numberGenerator.getMaxValue());
         existing.setLastReset(numberGenerator.getLastReset());
         existing.setCurrentValue(numberGenerator.getCurrentValue());
+        existing.setXorMask(numberGenerator.getXorMask());
         repository.save(existing);
     }
 

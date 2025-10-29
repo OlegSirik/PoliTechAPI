@@ -11,7 +11,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
   app:
-    image: olegsirik/vsk-robot-zaytsev
+    image: olegsirik/vsk-robot-zaytsev:latest
     depends_on:
       - db
     environment:

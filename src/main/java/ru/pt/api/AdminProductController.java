@@ -4,6 +4,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.pt.domain.productVersion.ProductVersionModel;
 import ru.pt.service.ProductService;
+import ru.pt.service.LobService;
+import ru.pt.domain.lob.LobModel;
 
 import java.util.List;
 import java.util.Map;
@@ -13,9 +15,11 @@ import java.util.Map;
 public class AdminProductController {
 
     private final ProductService productService;
+    private final LobService lobService;
 
-    public AdminProductController(ProductService productService) {
+    public AdminProductController(ProductService productService, LobService lobService) {
         this.productService = productService;
+        this.lobService = lobService;
     }
 
     @GetMapping
@@ -56,6 +60,18 @@ public class AdminProductController {
     public ResponseEntity<Void> deleteVersion(@PathVariable("id") Integer id, @PathVariable("versionNo") Integer versionNo) {
         productService.deleteVersion(id, versionNo);
         return ResponseEntity.noContent().build();
+    }
+
+    // get /admin/lobs/example returns json example
+    @GetMapping("/{id}/versions/{versionNo}/example_quote")
+    public ResponseEntity<String> getJsonExampleQuote(@PathVariable("id") Integer id, @PathVariable("versionNo") Integer versionNo) {
+        return ResponseEntity.ok(productService.getJsonExampleQuote(id, versionNo));
+    }
+
+    // get /admin/lobs/example returns json example
+    @GetMapping("/{id}/versions/{versionNo}/example_save")
+    public ResponseEntity<String> getJsonExampleSave(@PathVariable("id") Integer id, @PathVariable("versionNo") Integer versionNo) {
+        return ResponseEntity.ok(productService.getJsonExampleSave(id, versionNo));
     }
 }
 

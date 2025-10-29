@@ -16,8 +16,10 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
     @Query("select f from FileEntity f where f.productCode = :productCode and f.fileType = :fileType and f.deleted = false")
     FileEntity findActiveByProductandFileType(@Param("productCode") String productCode, @Param("fileType") String fileType);
 
-    @Query("select f.id, f.fileType, f.fileDesc, f.productCode from FileEntity f where f.deleted = false and (:productCode is null or f.productCode = :productCode) order by f.id")
+    @Query("select f.id, f.fileType, f.fileDesc, f.productCode, f.packageCode from FileEntity f where f.deleted = false and (:productCode is null or f.productCode = :productCode) order by f.id")
     List<Object[]> listSummaries(@Param("productCode") String productCode);
+
+    Optional<FileEntity> findActiveByFileTypeAndProductCodeAndPackageCode(String fileType, String productCode, Integer packageCode);
 }
 
 

@@ -106,6 +106,13 @@ public class LobService {
         return true;
     }
 
+    @Transactional
+    public boolean softDeleteById(Integer id) {
+        Lob lob = lobRepository.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new NotFoundException("Lob not found"));
+        lob.setDeleted(true); 
+        lobRepository.save(lob);
+        return true;
+    }
     // create method update by id. get lob from repository by id. if lob is not found, throw not found exception.
     // check that code is not changed. if changed, throw bad request exception.
     // update lob with payload. return updated lob.

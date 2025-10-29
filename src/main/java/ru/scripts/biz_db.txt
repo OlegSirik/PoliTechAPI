@@ -1,0 +1,35 @@
+create sequence policy_seq
+
+create table policy_data
+(id primary key
+policy jsonb )
+
+create table policy_index
+( 
+id number primary key 
+draft_id string 30
+policy_nr string 30
+version_no int
+top_version boolean
+product_code  string 30
+create_date datetime utc
+issue_date datetime utc 
+issue_timezone timezone
+payment_date datetime utc
+start_date datetime utc
+end_Date datetime utc
+user_account_id int
+partner_account_id int
+version_status string 30
+)
+
+create domain model in domain.bizdata package
+
+create repository with seqrch by id, draft_id, policy_number, user_account_id
+
+create service with methods
+create_policy ( policy_data ) - fill policy index by jsonpath. insert both tables
+update_policy
+policy_status_paid(policynumber, paymentdate) - take policy from db< update status to PAID, payment_date  to paymentdate and save
+
+add V3 migration script

@@ -23,7 +23,7 @@ public class Lob {
     @Column(name = "lob", columnDefinition = "jsonb", nullable = false)
     private LobModel lob;
 
-    @Column(name = "isDeleted", nullable = false)
+    @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
     public Long getId() {

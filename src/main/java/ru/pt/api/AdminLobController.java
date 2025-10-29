@@ -4,6 +4,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import ru.pt.domain.lob.LobModel;
+import ru.pt.domain.lob.LobVar;
+import ru.pt.hz.JsonExampleBuilder;
 import ru.pt.service.LobService;
 
 import java.util.List;
@@ -52,11 +54,29 @@ public class AdminLobController {
     }
 
     // delete /admin/lobs/{lob_code} soft delete
-    @DeleteMapping("/{code}")
-    public ResponseEntity<Void> deleteLob(@PathVariable("code") String code) {
-        boolean deleted = lobService.softDeleteByCode(code);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteLob(@PathVariable("id") Integer id) {
+        boolean deleted = lobService.softDeleteById(id);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
+
+    // get /admin/lobs/example returns json example
+    @GetMapping("/{code}/example")
+    public ResponseEntity<String> getJsonExample(@PathVariable("code") String code) {
+        LobModel lob = lobService.getByCode(code);
+        if (lob == null) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            String jsonExample = JsonExampleBuilder.buildJsonExample(lob.getMpVars().stream().map(LobVar::getVarPath).collect(Collectors.toList()));
+            return ResponseEntity.ok(jsonExample);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+
 }
 
 

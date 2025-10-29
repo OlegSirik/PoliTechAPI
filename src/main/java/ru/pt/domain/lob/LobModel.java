@@ -20,15 +20,23 @@ public class LobModel {
     @JsonProperty("mpCovers")
     private List<LobCover> mpCovers;
     
+    @JsonProperty("mpPhType")
+    private String mpPhType;
+
+    @JsonProperty("mpInsObjectType")
+    private String mpInsObjectType;
+
     // Constructors
     public LobModel() {}
     
-    public LobModel(Long id, String mpCode, String mpName, List<LobVar> mpVars, List<LobCover> mpCovers) {
+    public LobModel(Long id, String mpCode, String mpName, List<LobVar> mpVars, List<LobCover> mpCovers, String mpPhType, String mpInsObjectType) {
         this.id = id;
         this.mpCode = mpCode;
         this.mpName = mpName;
         this.mpVars = mpVars;
         this.mpCovers = mpCovers;
+        this.mpPhType = mpPhType;
+        this.mpInsObjectType = mpInsObjectType;
     }
     
     // Getters and Setters
@@ -70,5 +78,21 @@ public class LobModel {
     
     public void setMpCovers(List<LobCover> mpCovers) {
         this.mpCovers = mpCovers;
+    }
+
+    public String getMpPhType() {
+        return mpPhType;
+    }
+    
+    public void setMpPhType(String mpPhType) {
+        this.mpPhType = mpPhType;
+    }
+
+    public String getMpInsObjectType() {
+        return mpInsObjectType;
+    }
+    
+    public void setMpInsObjectType(String mpInsObjectType) {
+        this.mpInsObjectType = mpInsObjectType;
     }
 }

@@ -32,6 +32,10 @@ public class Policy {
 
     @JsonProperty("policyNumber")
     private String policyNumber;
+
+    @JsonProperty("premium")
+    private Double premium;
+    
     // Constructors
     public Policy() {}
 
@@ -106,5 +110,13 @@ public class Policy {
 
     public void setPolicyNumber(String policyNumber) {
         this.policyNumber = policyNumber;
+    }
+
+    public Double getPremium() {
+        return premium;
+    }
+
+    public void setPremium(Double premium) {
+        this.premium = premium;
     }
 }

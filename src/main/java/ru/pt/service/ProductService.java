@@ -8,14 +8,23 @@ import ru.pt.domain.Product;
 import ru.pt.domain.ProductVersion;
 import ru.pt.domain.productVersion.ProductVersionModel;
 import ru.pt.domain.productVersion.PvPackage;
+import ru.pt.domain.productVersion.PvVar;
+import ru.pt.domain.lob.LobModel;
+import ru.pt.domain.lob.LobVar;
 import ru.pt.exception.BadRequestException;
+import ru.pt.hz.JsonExampleBuilder;
+import ru.pt.service.LobService;
 import ru.pt.repository.ProductRepository;
 import ru.pt.repository.ProductVersionRepository;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,12 +33,16 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductVersionRepository productVersionRepository;
     private final NumberGeneratorService numberGeneratorService;
+    private final LobService lobService;
+
     public ProductService(ProductRepository productRepository,
                           ProductVersionRepository productVersionRepository,
-                          NumberGeneratorService numberGeneratorService) {
+                          NumberGeneratorService numberGeneratorService,
+                          LobService lobService) {
         this.productRepository = productRepository;
         this.productVersionRepository = productVersionRepository;
         this.numberGeneratorService = numberGeneratorService;
+        this.lobService = lobService;
     }
 
     public List<Map<String, Object>> listSummaries() {
@@ -97,6 +110,25 @@ public class ProductService {
         pv.setVersionNo(1);
         pv.setProduct(productVersionModel);
         
+// copy lob.mpVars to productVersionModel.vars
+        LobModel lob = lobService.getByCode(productVersionModel.getLob());
+        if (lob != null) {
+            if (productVersionModel.getVars() == null) {
+                productVersionModel.setVars(new ArrayList<>());
+            }
+            for (LobVar var : lob.getMpVars()) {
+                PvVar pvVar = new PvVar();
+                pvVar.setVarCode(var.getVarCode());
+                pvVar.setVarName(var.getVarName());
+                pvVar.setVarPath(var.getVarPath());
+                pvVar.setVarType(var.getVarType());
+                pvVar.setVarValue(var.getVarValue());
+                pvVar.setVarDataType(var.getVarDataType());
+                productVersionModel.getVars().add(pvVar);
+            }
+        }
+
+
         productVersionRepository.save(pv);
 
         //if productVersion.getNumberGenerator() is not null, then create a new number generator
@@ -115,10 +147,14 @@ public class ProductService {
     }
 
     public ProductVersionModel getVersion(Integer id, Integer versionNo) {
+        try {
         ProductVersion pv = productVersionRepository.findByProductIdAndVersionNo(id, versionNo).orElse(null);
                 
         ProductVersionModel productVersionModel = pv.getProduct();
         return productVersionModel;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Version not found");
+        }
     }
 
     @Transactional
@@ -172,7 +208,8 @@ public class ProductService {
             numberGenerator.setMaxValue(newProductVersionModel.getNumberGenerator().getMaxValue());
             numberGenerator.setProductCode(newProductVersionModel.getCode());
             numberGenerator.setResetPolicy(newProductVersionModel.getNumberGenerator().getResetPolicy());
-
+            numberGenerator.setXorMask(newProductVersionModel.getNumberGenerator().getXorMask());
+            
             numberGeneratorService.create(numberGenerator);
 
         }
@@ -215,7 +252,118 @@ public class ProductService {
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
     }
 
+    public String getJsonExampleQuote(Integer id, Integer versionNo) {
+        ProductVersionModel productVersionModel = getVersion(id, versionNo);
+        LobModel lob = lobService.getByCode(productVersionModel.getLob());
 
+        List<String> jsonPaths = new ArrayList<>();
+        Map<String, String> jsonValues = new HashMap<>();
+
+        jsonPaths.add("product.code");
+        jsonValues.put("product.code", productVersionModel.getCode());
+
+        jsonPaths.add("issueDate");
+        jsonValues.put("issueDate", OffsetDateTime.now().toString());
+
+        if ( productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST") ) {
+            String value = productVersionModel.getWaitingPeriod().getValidatorValue().split(",")[0].trim();
+            jsonPaths.add("waitingPeriod");
+            jsonValues.put("waitingPeriod", value);
+        } else {
+            jsonPaths.add("startDate");
+            jsonValues.put("startDate", OffsetDateTime.now().toString());
+        }
+
+        if ( productVersionModel.getPolicyTerm().getValidatorType().equals("LIST") ) {
+            String value = productVersionModel.getPolicyTerm().getValidatorValue().split(",")[0].trim();
+            jsonPaths.add("policyTerm");
+            jsonValues.put("policyTerm", value);
+        } else {
+            jsonPaths.add("endDate");
+            jsonValues.put("endDate", OffsetDateTime.now().plusYears(1).toString());
+        }
+
+        Set<String> validatorKeys = new HashSet<>();
+
+        productVersionModel.getQuoteValidator().forEach(validator -> {
+            validatorKeys.add(validator.getKeyLeft());
+            validatorKeys.add(validator.getKeyRight());
+        });
+
+        // for each validatorKeys get path by key from lob.mpVars
+        lob.getMpVars().forEach(mpVar -> {
+            if (validatorKeys.contains(mpVar.getVarCode())) {
+                jsonPaths.add(mpVar.getVarPath());
+            }
+        });
+
+        try {
+        String ret = JsonExampleBuilder.buildJsonExampleProduct(jsonPaths, jsonValues);
+        //List<String> jsonPaths = lob.getMpVars().stream().map(LobVar::getVarPath).collect(Collectors.toList());
+        return ret;
+        } catch (Exception e) {
+            return "{}";
+        }
+        //List<String> jsonPaths
+        //JsonExampleBuilder.buildJsonQuote(lob.getMpVars().stream().map(LobVar::getVarPath).collect(Collectors.toList()));
+    }
+
+    public String getJsonExampleSave(Integer id, Integer versionNo) {
+        ProductVersionModel productVersionModel = getVersion(id, versionNo);
+        LobModel lob = lobService.getByCode(productVersionModel.getLob());
+
+        List<String> jsonPaths = new ArrayList<>();
+        Map<String, String> jsonValues = new HashMap<>();
+
+        jsonPaths.add("product.code");
+        jsonValues.put("product.code", productVersionModel.getCode());
+
+        jsonPaths.add("issueDate");
+        jsonValues.put("issueDate", OffsetDateTime.now().toString());
+
+        if ( productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST") ) {
+            String value = productVersionModel.getWaitingPeriod().getValidatorValue().split(",")[0].trim();
+            jsonPaths.add("waitingPeriod");
+            jsonValues.put("waitingPeriod", value);
+        } else {
+            jsonPaths.add("startDate");
+            jsonValues.put("startDate", OffsetDateTime.now().toString());
+        }
+
+        if ( productVersionModel.getPolicyTerm().getValidatorType().equals("LIST") ) {
+            String value = productVersionModel.getPolicyTerm().getValidatorValue().split(",")[0].trim();
+            jsonPaths.add("policyTerm");
+            jsonValues.put("policyTerm", value);
+        } else {
+            jsonPaths.add("endDate");
+            jsonValues.put("endDate", OffsetDateTime.now().plusYears(1).toString());
+        }
+
+        jsonPaths.add("insuredObject.packageCode");
+        jsonValues.put("insuredObject.packageCode", "0");
+
+        Set<String> validatorKeys = new HashSet<>();
+
+        productVersionModel.getSaveValidator().forEach(validator -> {
+            validatorKeys.add(validator.getKeyLeft());
+            validatorKeys.add(validator.getKeyRight());
+        });
+
+        // for each validatorKeys get path by key from lob.mpVars
+        lob.getMpVars().forEach(mpVar -> {
+            if (validatorKeys.contains(mpVar.getVarCode())) {
+                jsonPaths.add(mpVar.getVarPath());
+            }
+        });
+
+        try {
+        String ret = JsonExampleBuilder.buildJsonExampleProduct(jsonPaths, jsonValues);
+        //List<String> jsonPaths = lob.getMpVars().stream().map(LobVar::getVarPath).collect(Collectors.toList());
+        return ret;
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
     
 }
 

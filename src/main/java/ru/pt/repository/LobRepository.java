@@ -22,7 +22,7 @@ public interface LobRepository extends JpaRepository<Lob, Integer> {
     @Query("select nextval('pt_seq')")
     Integer nextLobId();
 
-    Optional<Lob> findByIdAndIsDeletedFalse(Integer code);
+    Optional<Lob> findByIdAndIsDeletedFalse(Integer id);
 }
 
 

@@ -17,6 +17,15 @@ public class ValidatorImpl {
             case "=": return Objects.equals(v1, v2);
             case "!=": return !Objects.equals(v1, v2);
             case "MATCHES_REGEX": return v1 != null && v2 != null && v1.matches(v2);
+            case "IN_LIST":
+                if (v2 == null) return false;
+                String[] items = v2.split(",");
+                for (String item : items) {
+                    if (Objects.equals(v1, item.trim())) {
+                        return true;
+                    }
+                }
+                return false;
             default: return false;
         }
     }
@@ -43,6 +52,7 @@ public class ValidatorImpl {
     }
 
     public static boolean validate(List<LobVar> dataMap, String leftKey, String rightKey, String rightValue, String ruleType) {
+        try {
         LobVar leftVarDef = dataMap.stream().filter(v -> v.getVarCode().equals(leftKey)).findFirst().orElse(null);
         LobVar rightVarDef = dataMap.stream().filter(v -> v.getVarCode().equals(rightKey)).findFirst().orElse(null);
         if (rightVarDef != null) {
@@ -62,6 +72,9 @@ public class ValidatorImpl {
             return checkString(ruleType, leftVarDef.getVarValue(), rightVarDef.getVarValue());
         }
         
-        return false;
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+
 import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -34,6 +35,9 @@ public class ProductVersionModel {
 
 	@JsonProperty("policyTerm")
 	private PeriodRule policyTerm;
+
+	@JsonProperty("vars")
+    private List<PvVar> vars;
 
 	@JsonProperty("quoteValidator")
 	private List<ValidatorRule> quoteValidator;
@@ -151,6 +155,14 @@ public class ProductVersionModel {
 	public void setNumberGenerator(NumberGeneratorCfg numberGenerator) {
 		this.numberGenerator = numberGenerator;
 	}	
+
+    public List<PvVar> getVars() {
+        return vars;
+    }
+
+    public void setVars(List<PvVar> vars) {
+        this.vars = vars;
+    }
 }
 
 

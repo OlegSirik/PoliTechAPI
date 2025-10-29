@@ -1,16 +1,17 @@
 # syntax=docker/dockerfile:1
 
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+FROM gradle:8.7-jdk17 AS build
 WORKDIR /app
-COPY pom.xml .
-RUN mvn -q -e -DskipTests dependency:go-offline
+COPY build.gradle gradlew gradlew.bat ./
+COPY gradle/ ./gradle/
+RUN gradle dependencies --no-daemon
 COPY src ./src
-RUN mvn -q -DskipTests package
+RUN gradle build --no-daemon -x test
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 ENV JAVA_OPTS=""
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 

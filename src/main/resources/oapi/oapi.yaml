@@ -1,0 +1,1128 @@
+openapi: 3.0.3
+info:
+  title: PoliTech Private
+  description: A Spring Boot application for managing insurance policies with advanced number generation capabilities
+  version: 1.0.0
+  contact:
+    name: VSK API Team
+    email: sirik@vsk.ru
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/insur/PoliTechPrivate/1.0.0
+paths:
+  # LOB Management Endpoints
+  /admin/lobs:
+    get:
+      tags:
+        - lob
+      description: |
+        Возвращает список доступных "Линий бизнеса" (Product family name)
+        Настройка LoB связана со структурой json запроса
+        Поэтому доступно только роли admin
+      operationId: listLobs
+      responses:
+        "200":
+          description: список доступных "Линий бизнеса"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LobSummary"
+
+    post:
+      tags:
+        - lob
+      description: |
+        Добавить новую линию бизнеса
+      operationId: createLob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Lob"
+      responses:
+        "200":
+          description: Created LOB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lob"
+        "400":
+          description: Bad request - validation errors
+
+  /admin/lobs/{lobCode}:
+    get:
+      tags:
+        - lob
+      summary: Get LOB by code
+      description: Returns the JSON configuration for a specific LOB
+      operationId: getLobByCode
+      parameters:
+        - name: lobCode
+          in: path
+          required: true
+          description: LOB code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: LOB configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lob"
+        "404":
+          description: LOB not found
+
+    put:
+      tags:
+        - lob
+      summary: Update LOB
+      description: Updates a LOB configuration
+      operationId: updateLob
+      parameters:
+        - name: lobCode
+          in: path
+          required: true
+          description: LOB code
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Lob"
+      responses:
+        "200":
+          description: Updated LOB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lob"
+        "404":
+          description: LOB not found
+
+    delete:
+      tags:
+        - lob
+      description: Soft delete lob
+      operationId: deleteLob
+      parameters:
+        - name: lobCode
+          in: path
+          required: true
+          description: LOB code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated LOB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lob"
+        "404":
+          description: LOB not found
+
+  # Product Management Endpoints
+  /admin/products:
+    get:
+      tags:
+        - product
+      summary: List all products
+      description: Returns a list of all active products with summary information
+      operationId: listProducts
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /admin/products/{id}:
+    delete:
+      tags:
+        - product
+      summary: Delete product
+      description: Soft deletes a product (sets isDeleted flag)
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Product deleted successfully
+        "404":
+          description: Product not found
+
+  # Product Version Management Endpoints
+  /admin/products/{id}/versions/{versionNo}:
+    get:
+      tags:
+        - product
+      summary: Get product version
+      description: Returns the JSON configuration for a specific product version
+      operationId: getProductVersion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+            format: int64
+        - name: versionNo
+          in: path
+          required: true
+          description: Version number
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product version configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVersion"
+        "404":
+          description: Product or version not found
+
+    put:
+      tags:
+        - product
+      summary: Update product version
+      description: Updates a development version of a product (only dev versions can be updated)
+      operationId: updateProductVersion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+            format: int64
+        - name: versionNo
+          in: path
+          required: true
+          description: Version number
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductVersion"
+      responses:
+        "200":
+          description: Updated product version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVersion"
+        "400":
+          description: Bad request - only dev versions can be updated
+        "404":
+          description: Product or version not found
+
+    delete:
+      tags:
+        - product
+      summary: Delete product version
+      description: Deletes a development version of a product (only dev versions can be deleted)
+      operationId: deleteProductVersion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: versionNo
+          in: path
+          required: true
+          description: Version number
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Version deleted successfully
+        "400":
+          description: Bad request - only dev versions can be deleted
+        "404":
+          description: Product or version not found
+
+  /admin/products/{id}/versions/{versionNo}/rpc/create:
+    post:
+      tags:
+        - product
+
+      summary: Create new product version
+      description: |
+        Создает новую версию продукта как копию текущей.
+        Новая версия создается в статусе DEV
+        Ограничение - может быть только одна версия в статусе DEV, 
+        поэтому если такая уже есть, то возникнет ошибка.
+      operationId: createProductVersion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: versionNo
+          in: path
+          required: true
+          description: Source version number
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Created product version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVersion"
+        "400":
+          description: Bad request - only one version can be in dev status
+        "404":
+          description: Product or source version not found
+
+  /admin/products/{id}/versions/{versionNo}/rpc/gotoprod:
+    post:
+      tags:
+        - product
+      summary: Move dev version to prod
+      description: |
+        Ограничение - применимо только для версии в статусе DEV, 
+        Меняет новер продакшен версии у продукта, обнуляет дев версию.
+        Так же должны запускаться тестовые процедуры, которые пока не придумали.
+        Возможен градиентный анализ текущего тарифа, позволит найти изменения фактора приводящие к сильным изменениям тарифа
+        Сравнение с предыдущей версией, вля поиска сильных расхождений
+        Возможен полный перебор, если количество комбинаций разумное, так и выборочный.
+      operationId: gotoprodProductVersion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: versionNo
+          in: path
+          required: true
+          description: Source version number
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Created product version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVersion"
+        "400":
+          description: Bad request - only one version can be in dev status
+        "404":
+          description: Product or source version not found
+
+  /admin/products/{productId}/versions/{versionNo}/packages/{packageNo}/calculator:
+    post:
+      description: dsfgsdf
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: versionNo
+          in: path
+          required: true
+          description: Source version number
+          schema:
+            type: integer
+        - name: packageNo
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Created product version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculator"
+        "400":
+          description: Bad request - only one version can be in dev status
+        "404":
+          description: Product or source version not found
+
+  /account/sa/clients:
+    get:
+      tags:
+        - account
+        - sys_admin
+      description: |
+        Список подключенных партнеров
+      operationId: findClients
+      responses:
+        "200":
+          description: список клиентов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LobSummary"
+
+  /admin/products/{productId}/packages/{packageNo}/files:
+    get:
+      tags:
+        - files
+      description: Список шаблоннов по продукту и пакету
+      operationId: getProductFiles
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: packageNo
+          in: path
+          required: true
+          description: Package number
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductFile"
+        "404":
+          description: Product or package not found
+
+    post:
+      tags:
+        - files
+      description: |
+        Загрузка нового шаблона по продукту и пакету. Продукт и пакет берутся из URL, и должны существовать.
+        Если такой шаблон существует, то ошибка.
+        Ответ 201 будет без тела файла.
+      operationId: createProductFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductFile"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+        - name: packageNo
+          in: path
+          required: true
+          description: Package number
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created product file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductFile"
+        "404":
+          description: Product or package not found
+
+components:
+  schemas:
+    Calculator:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        versionNo:
+          type: string
+        packageNo:
+          type: string
+        vars:
+          type: array
+          items:
+            $ref: "#/components/schemas/LobVar"
+        formulas:
+          type: array
+          items:
+            $ref: "#/components/schemas/Formula"
+        coefficients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Coefficient"
+
+    FormulaLine:
+      type: object
+      properties:
+        orderNr:
+          type: string
+        conditionLeft:
+          type: string
+        conditionOperator:
+          type: string
+        conditionRight:
+          type: string
+        expressionResult:
+          type: string
+        expressionLeft:
+          type: string
+        expressionOperator:
+          type: string
+          enum: ["*", "+", "-", "/"]
+        expressionRight:
+          type: string
+        postProcessor:
+          type: string
+
+    Formula:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Var"
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormulaLine"
+
+    Coefficient:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Var"
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoefficientColumn"
+
+    CoefficientColumn:
+      type: object
+      properties:
+        nr:
+          type: string
+          description: порядковый номер колонки с 0 до 10
+        varCode:
+          type: string
+          description: Наименование ключа
+        conditionOperator:
+          type: string
+          description: оператор сравнения
+        sortOrder:
+          type: string
+          description: направление сортировки
+
+    Var:
+      type: object
+      description: просто описание переменной
+      properties:
+        varCode:
+          type: string
+          description: код, искользуемый далее как уникальный ключ атрибута.
+          example: "ph_firstname"
+        varName:
+          type: string
+          description: "Понятное для бизнеспользователя описание атрибута "
+          example: "Имя страхователя"
+
+    # Number Generator Schema
+    NumberGenerator:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Generator ID
+        productCode:
+          type: string
+          description: Product code this generator is associated with
+          example: "NS-SRAVNIRU"
+        mask:
+          type: string
+          description: Number generation mask using {KEY} format
+          example: "{YYYY}-{NS}-{XXXX}"
+        resetPolicy:
+          type: string
+          enum: [YEARLY, MONTHLY, NEVER]
+          description: Reset policy for sequence numbers
+          example: "YEARLY"
+        maxValue:
+          type: integer
+          description: Maximum value before reset
+          example: 999999
+        lastReset:
+          type: string
+          format: date
+          description: Date of last reset
+        currentValue:
+          type: integer
+          description: Current sequence value
+          example: 0
+
+    NumberGeneratorConfig:
+      type: object
+      properties:
+        mask:
+          type: string
+          description: Number generation mask
+          example: "{YYYY}-{NS}-{XXXX}"
+        maxNumber:
+          type: integer
+          description: Maximum number value
+          example: 9999
+        resetPolicy:
+          type: string
+          enum: [YEARLY, MONTHLY, NEVER]
+          description: Reset policy
+          example: "YEARLY"
+
+    # Policy Schemas
+    PolicyRequest:
+      type: object
+      required:
+        - product
+      properties:
+        product:
+          type: object
+          required:
+            - code
+          properties:
+            code:
+              type: string
+              description: Product code
+              example: "NS-SRAVNIRU"
+        issueDate:
+          type: string
+          description: Policy issue date
+          example: "01-01-2026"
+        issueTimeZone:
+          type: string
+          description: Issue time zone
+          example: "3"
+        startDate:
+          type: string
+          description: Policy start date
+          example: "12-12-2005"
+        endDate:
+          type: string
+          description: Policy end date
+          example: "12-12-2026"
+        premium:
+          type: string
+          description: Policy premium amount
+          example: "2000.00"
+
+    InnerPolicy:
+      type: object
+      properties:
+        product:
+          $ref: "#/components/schemas/ProductInfo"
+        waitingPeriod:
+          type: string
+          description: Waiting period configuration
+          example: "P0D"
+        policyTerm:
+          type: string
+          description: Policy term configuration
+          example: "P1Y"
+        issueDate:
+          type: string
+          description: Issue date
+          example: "01-01-2026"
+        issueTimeZone:
+          type: string
+          description: Issue time zone
+          example: "3"
+        startDate:
+          type: string
+          description: Start date
+          example: "12-12-2005"
+        endDate:
+          type: string
+          description: End date
+          example: "12-12-2026"
+        premium:
+          type: string
+          description: Premium amount
+          example: "2000.00"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyError"
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyAttribute"
+        bundles:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyBundle"
+
+    ProductInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1202
+        lob:
+          type: string
+          example: "NS"
+        code:
+          type: string
+          example: "NS-SRAVNIRU"
+        name:
+          type: string
+          example: "НС Сравниру"
+        versionNo:
+          type: integer
+          example: 0
+        versionStatus:
+          type: string
+          example: "DEV"
+
+    PolicyError:
+      type: object
+      properties:
+        keyLeft:
+          type: string
+          description: Field that caused the error
+          example: "insAmount"
+        errorText:
+          type: string
+          description: Error message
+          example: "Ошибка в страховой сумме"
+
+    PolicyAttribute:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Attribute key
+          example: "InsAmount"
+        path:
+          type: string
+          description: JSONPath to value
+          example: "string"
+        value:
+          type: string
+          description: Attribute value
+          example: "100000"
+
+    PolicyBundle:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "Basic"
+        name:
+          type: string
+          example: "Простой"
+        premium:
+          type: string
+          example: "0"
+        covers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyCover"
+
+    PolicyCover:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "PD"
+        existsInRequest:
+          type: boolean
+          example: false
+        isMandatory:
+          type: boolean
+          example: true
+        waitingPeriod:
+          type: string
+          example: "P0D"
+        coverageTerm:
+          type: string
+          example: "P1Y"
+        startDate:
+          type: string
+          example: ""
+        endDate:
+          type: string
+          example: ""
+        insAmount:
+          type: string
+          example: ""
+        premium:
+          type: string
+          example: ""
+        isDeductibleMandatory:
+          type: boolean
+          example: false
+        deductibles:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDeductible"
+
+    PolicyDeductible:
+      type: object
+      properties:
+        nr:
+          type: integer
+          example: 1
+        deductibleType:
+          type: string
+          example: "UNCONDITIONAL"
+        deductible:
+          type: number
+          format: double
+          example: 100
+        deductibleUnit:
+          type: string
+          example: "SUM"
+        deductibleSpecific:
+          type: string
+          example: "EVERY"
+
+    # Product Schemas
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1202
+        lob:
+          type: string
+          example: "NS"
+        code:
+          type: string
+          example: "NS-SRAVNIRU"
+        name:
+          type: string
+          example: "НС Сравниру"
+        prodVersionNo:
+          type: integer
+          nullable: true
+          example: null
+        devVersionNo:
+          type: integer
+          nullable: true
+          example: 1
+
+    ProductVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1202
+        lob:
+          type: string
+          example: "NS"
+        code:
+          type: string
+          example: "NS-SRAVNIRU"
+        name:
+          type: string
+          example: "НС Сравниру"
+        versionNo:
+          type: integer
+          example: 1
+        versionStatus:
+          type: string
+          example: "DEV"
+        activationDelay:
+          $ref: "#/components/schemas/PeriodConfig"
+        policyTerm:
+          $ref: "#/components/schemas/PeriodConfig"
+        quoteValidator:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationRule"
+        saveValidator:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationRule"
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPackage"
+        numberGenerator:
+          $ref: "#/components/schemas/NumberGeneratorConfig"
+
+    PeriodConfig:
+      type: object
+      properties:
+        validatorType:
+          type: string
+          example: "LIST"
+          enum: ["RANGE,LIST,NEXT_MONTH"]
+        validatorValue:
+          type: string
+          example: "P1Y, P2Y или P0D-P12D"
+
+    ValidationRule:
+      type: object
+      properties:
+        lineNr:
+          type: integer
+          example: 0
+        keyLeft:
+          type: string
+          example: "insAmount"
+        ruleType:
+          type: string
+          example: "RANGE"
+        keyRight:
+          type: string
+          example: "string"
+        valueRight:
+          type: string
+          example: "10000-200000"
+        dataType:
+          type: string
+          example: "NUMBER"
+          enum: ["STRING,NUMBER,DATE,PERIOD"]
+        errorText:
+          type: string
+          example: "Ошибка в страховой сумме"
+
+    ProductPackage:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "Basic"
+        name:
+          type: string
+          example: "Простой"
+        covers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCover"
+
+    ProductCover:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "PD"
+        isMandatory:
+          type: boolean
+          example: true
+        delayPeriod:
+          type: string
+          example: "P0D"
+        coverageTerm:
+          type: string
+          example: "P1Y"
+        isDeductibleMandatory:
+          type: boolean
+          example: false
+        deductibles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductDeductible"
+
+    ProductDeductible:
+      type: object
+      properties:
+        nr:
+          type: integer
+          example: 1
+        deductibleType:
+          type: string
+          example: "string"
+        deductible:
+          type: number
+          format: double
+          example: 100
+        deductibleUnit:
+          type: string
+          example: "SUM"
+        deductibleSpecific:
+          type: string
+          example: "EVERY"
+
+    # LOB Schemas
+    LobSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        mpCode:
+          type: string
+          description: LOB code
+        mpName:
+          type: string
+          description: LOB name
+
+    LobVar:
+      type: object
+      properties:
+        varCode:
+          type: string
+          description: |
+            код, искользуемый далее как уникальный ключ атрибута.
+            есть ограничения на спец символы.
+            используется как ключ, для поиска значений
+            используется как ключ при генерации pdf
+          example: "ph_firstname"
+        varDesc:
+          type: string
+          description: "Понятное для бизнеспользователя описание атрибута "
+          example: "Имя страхователя"
+        varPath:
+          type: string
+          description: "jsonpath по которому можно получить значение атрибута из запроса"
+          example: "policyHolder.person.firstName"
+        varType:
+          type: string
+          description: |
+            Тип переменной. Подробее можно посмотреть в калькуляторе
+            В данном контексте используется тип -
+            IN данные из входящего запроса на расчет, вычисляются по jsonpath. в калькуляторе изменять нельзя.
+            VAR - данные, которые можно изменять в процессе расчета
+            CONST - данные только для чтения. Нужно чтобы убрать неименованные числа из расчета.
+            MAGIC расчетные значения, на основе входящего вектора. 
+            COEFFICIENT коеффициент, вычисляемый по таблице. только чтение.
+          enum: ["IN", "VAR", "CONST", "MAGIC", "COEFFICIENT"]
+          example: "IN"
+        varDataType:
+          type: string
+          description: |
+            Тип данных, хранящихся в переменной.
+            Нужен для правильной работы операторов сравнения, сложения и т.д.
+          enum: ["STRING", "NUMBER"]
+        varValue:
+          type: string
+          description: |
+            Значение переменной.
+
+    Lob:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        id:
+          type: string
+          description: sequence generated number
+        mpCode:
+          type: string
+          description: LOB code
+        mpName:
+          type: string
+          description: LOB name
+        mpVars:
+          type: array
+          description: список атрибутов договора с такой линией бизнеса
+          items:
+            $ref: "#/components/schemas/LobVar"
+        mpCovers:
+          type: array
+          description: "справочник покрытий, применимых к данной линии бизнеса."
+          items:
+            type: object
+            properties:
+              coverCode:
+                type: string
+                description: |
+                  "код покрытия. используется далее при создании продуктов и в калькуляторах
+                  вынесен в отдельный справочник для уменьшения энтропии"
+                example: "DEVICE_BREAKAGE"
+              coverName:
+                type: string
+                description: "описание покрытия на понятном языке"
+              risks:
+                type: string
+                description: |
+                  "список рисков входящих в покрытие. используется для заполнения договора страхования и как справочниая информация"
+
+    ProductFile:
+      type: object
+      description: |
+        Список шаблонов, которые можно сгенерить для этого продукта и пакета.
+      properties:
+        id:
+          type: integer
+          format: int64
+        productCode:
+          type: string
+          format: string
+        packageCode:
+          type: string
+          format: string
+        fileType:
+          type: string
+          example: "Policy"
+          description: |
+            Тип файла. Доступные значения будут в енаме:
+            Policy - договор страхования.
+            Invoice - счет на оплату.
+            Attachment - приложенный файл. и т.д.
+        fileDesc:
+          type: string
+          example: "Договор страхования"
+          description: |
+            Описание файла. Используется в интерфейсе для отображения пользователю.
+        fileBody:
+          type: string
+          description: |
+            Тело файла.
+        isDeleted:
+          type: boolean
+          example: false
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: LOB Management
+    description: |
+      Справочник линий бизнеса. Содержит описание объекта страхования и переменных
+      по которым можно получить значения полей объектов.
+      Так же содержит список возможных покрытий. Для поддержания порядка в справочной информации
+
+  - name: Number Generator
+    description: Policy number generation operations
+  - name: Policy Processing
+    description: Policy validation and calculation operations
+  - name: Product Management
+    description: Insurance product management operations

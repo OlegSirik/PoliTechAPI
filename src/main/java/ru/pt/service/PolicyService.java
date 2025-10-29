@@ -35,6 +35,8 @@ import ru.pt.domain.policy.Cover;
 import ru.pt.domain.policy.CoverInfo;
 import ru.pt.domain.policy.InsuredObject;
 import ru.pt.domain.policy.Policy;
+import ru.pt.domain.policydata.PolicyData;
+import ru.pt.domain.policydata.PolicyIndex;
 import ru.pt.domain.productVersion.ProductVersionModel;
 import ru.pt.domain.productVersion.PvCover;
 import ru.pt.domain.productVersion.PvDeductible;
@@ -47,8 +49,13 @@ import ru.pt.exception.BadRequestException;
 
 import ru.pt.hz.PeriodUtils;
 import ru.pt.repository.FileRepository;
+import ru.pt.repository.PolicyDataRepository;
+import ru.pt.repository.PolicyIndexRepository;
 
 import ru.pt.repository.ProductVersionRepository;
+import jakarta.transaction.Transactional;
+
+import java.time.LocalDate;
 
 
 @Service
@@ -71,7 +78,8 @@ public class PolicyService {
                        FileService fileService,
                        CalculatorService calculatorService,
                        NumberGeneratorService numberGeneratorService,
-                       LobService lobService) {
+                       LobService lobService) 
+    {
         this.fileRepository = fileRepository;
         this.productService = productService;
         this.objectMapper = objectMapper;
@@ -85,6 +93,9 @@ public class PolicyService {
         return Validator(requestBody,ValidatorType.QUOTE);
     }
 
+    public ObjectNode saveValidator(String requestBody) {
+        return Validator(requestBody,ValidatorType.SAVE);
+    }
 
     public ObjectNode Validator(String requestBody, ValidatorType validatorType) {
         List<ValidationError> errorModel = new ArrayList<ValidationError>();
@@ -95,6 +106,7 @@ public class PolicyService {
             Policy policy = objectMapper.convertValue(ctx.read("$"), Policy.class);
 
             String productCode = ctx.read("$.product.code", String.class);
+            String packageCode = ctx.read("insuredObject.packageCode", String.class);
 
             Product product = productService.getProductByCode(productCode);
 
@@ -122,8 +134,7 @@ public class PolicyService {
             List<LobVar> lobVars = lobModel.getMpVars();
             
             ObjectNode response = objectMapper.createObjectNode();
-            response.put("product", productCode);
-            
+
                 for (LobVar var : lobVars) {
                     if ("IN".equals(var.getVarType())) {
                         try {
@@ -140,6 +151,9 @@ public class PolicyService {
                     var.setVarValue(getMagicValue(lobVars, var.getVarCode(), policy));
                 }
             }
+
+            lobVars.add(new LobVar("product", "product", "product", "IN", productCode, VarDataType.STRING));
+            lobVars.add(new LobVar("packageCode", "package", "package", "IN", packageCode, VarDataType.STRING));
 
             List<ValidatorRule> validatorRules = null;
 
@@ -236,7 +250,7 @@ public class PolicyService {
                         .filter(v -> premiumVarCode.equals(v.getVarCode()))
                         .map(LobVar::getVarValue)
                         .findFirst()
-                        .orElse(null);
+                        .orElse("0.0");
 
                     String deductibleNr = lobVars.stream()
                         .filter(v -> deductibleNrVarCode.equals(v.getVarCode()))
@@ -268,6 +282,16 @@ public class PolicyService {
                 errorModel.add(new ValidationError("policyNumber", "Error generating policy number: " + e.getMessage()));
             }
 
+            Double premium = 0.0;
+
+            for ( Cover cover : policy.getInsuredObject().getCovers() ) {
+                if (cover.getPremium() != null) {
+                    premium += cover.getPremium();
+                }
+            };    
+
+            policy.setPremium(premium);
+
             response.put("policy", objectMapper.convertValue(policy, JsonNode.class));
 
             // Build context from LOB variables
@@ -282,7 +306,7 @@ public class PolicyService {
                     })
                     .collect(Collectors.toList()));
             
-            response.put("errorModel", objectMapper.convertValue(errorModel, JsonNode.class));
+            response.put("errorText", objectMapper.convertValue(errorModel, JsonNode.class));
             
 
             return response;
@@ -479,17 +503,19 @@ public class PolicyService {
             if (coverExists) {
                 Cover policyCover = policyCovers.stream().filter(c -> c.getCover() != null && c.getCover().getCode().equals(pvCover.getCode())).findFirst().orElse(null);
                 if (policyCover != null) {
-                    String activationDelay = pvCover.getWaitingPeriod();
-                    if (activationDelay != null && !activationDelay.isEmpty()) {
-                        policyCover.setStartDate(policy.getStartDate());
+                    String waitingPeriod = pvCover.getWaitingPeriod();
+                    if (waitingPeriod != null && !waitingPeriod.isEmpty()) {
+                        OffsetDateTime startDate = policy.getStartDate().plus(Period.parse(waitingPeriod));
+                        policyCover.setStartDate(startDate);
                     } else {
-                        policyCover.setStartDate(policy.getStartDate());  // TODO плюс activationDelay
+                        policyCover.setStartDate(policy.getStartDate());  
                     }
                     String coverageTerm = pvCover.getCoverageTerm();
                     if (coverageTerm != null && !coverageTerm.isEmpty()) {
-                        policyCover.setEndDate(policy.getEndDate());
+                        OffsetDateTime endDate = policyCover.getStartDate().plus(Period.parse(coverageTerm));
+                        policyCover.setEndDate(endDate);
                     } else {
-                        policyCover.setEndDate(policy.getEndDate());  // TODO start + coverageTerm
+                        policyCover.setEndDate(policy.getEndDate());  
                     }
              
 
@@ -638,6 +664,7 @@ public class PolicyService {
     // Временно тут
     public static String getMagicValue(List<LobVar> varDefs, String key, Policy policy) {
         LobVar varDef = null;
+        try {
         switch (key) {
             case "ph_isMale":
                 varDef = varDefs.stream().filter(v -> v.getVarCode().equals("ph_gender")).findFirst().orElse(null);
@@ -655,9 +682,11 @@ public class PolicyService {
 
                 varDef = varDefs.stream().filter(v -> v.getVarCode().equals("ph_birthdate")).findFirst().orElse(null);
                 LocalDate birthDate = LocalDate.parse(varDef.getVarValue());
+                LocalDate issueDate = policy.getIssueDate().toLocalDate();
                 if (varDef != null) {
                     // find year between localdate policy.getIssueDate() and localdate varDef.getVarValue()
-                    return Integer.toString(Period.between(LocalDate.parse(varDef.getVarValue()), policy.getIssueDate().toLocalDate()).getYears());
+                    String age = Integer.toString(Period.between(birthDate, issueDate).getYears());
+                    return age;
                 }
                 return "";
             case "io_age_issue":
@@ -690,11 +719,9 @@ public class PolicyService {
             default:
             return key +" Not Found";
         }
-        
+        } catch (Exception e) {
+            return "";
+        } 
     }
-
-
-
-
  
 }

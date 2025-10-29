@@ -19,6 +19,9 @@ public class FileEntity {
     @Column(name = "product_code", nullable = false, length = 30)
     private String productCode;
 
+    @Column(name = "package_code", nullable = false)
+    private Integer packageCode;
+
     @Column(name = "file_body")
     private byte[] fileBody;
 
@@ -33,6 +36,8 @@ public class FileEntity {
     public void setFileDesc(String fileDesc) { this.fileDesc = fileDesc; }
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
+    public Integer getPackageCode() { return packageCode; }
+    public void setPackageCode(Integer packageCode) { this.packageCode = packageCode; }
     public byte[] getFileBody() { return fileBody; }
     public void setFileBody(byte[] fileBody) { this.fileBody = fileBody; }
     public boolean isDeleted() { return deleted; }

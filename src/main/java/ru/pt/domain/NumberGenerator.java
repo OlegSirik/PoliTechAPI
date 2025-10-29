@@ -29,6 +29,9 @@ public class NumberGenerator {
     @Column(name = "current_value", nullable = false)
     private Integer currentValue = 0;
 
+    @Column(name = "xor_mask", nullable = false, length = 20)
+    private String xorMask;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -49,6 +52,9 @@ public class NumberGenerator {
 
     public Integer getCurrentValue() { return currentValue; }
     public void setCurrentValue(Integer currentValue) { this.currentValue = currentValue; }
+
+    public String getXorMask() { return xorMask; }
+    public void setXorMask(String xorMask) { this.xorMask = xorMask; }
 }
 
 

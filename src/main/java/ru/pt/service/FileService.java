@@ -32,13 +32,14 @@ public class FileService {
     }
 
     @Transactional
-    public FileEntity createMeta(String fileType, String fileDesc, String productCode) {
+    public FileEntity createMeta(String fileType, String fileDesc, String productCode, Integer packageCode) {
         long id = nextId();
         FileEntity e = new FileEntity();
         e.setId(id);
         e.setFileType(fileType);
         e.setFileDesc(fileDesc);
         e.setProductCode(productCode);
+        e.setPackageCode(packageCode);
         e.setDeleted(false);
         return fileRepository.save(e);
     }
@@ -64,6 +65,7 @@ public class FileService {
             m.put("fileType", r[1]);
             m.put("fileDescription", r[2]);
             m.put("productCode", r[3]);
+            m.put("packageCode", r[4]);
             result.add(m);
         }
         return result;
@@ -99,7 +101,12 @@ public class FileService {
                 for (Map.Entry<String, String> e : keyValues.entrySet()) {
                     PDField field = form.getField(e.getKey());
                     if (field != null) {
-                        field.setValue(e.getValue());
+                        System.out.println(e.getKey() + " " + e.getValue());
+                        try {
+                            field.setValue(e.getValue());
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
                     }
                 }
                 form.flatten();
@@ -110,6 +117,16 @@ public class FileService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("Failed to process PDF", ex);
         }
+    }
+
+    public byte[] getFile(String fileType, Map<String, String> keyValues) {
+
+        String productCode = keyValues.get("product");
+        String packageCode = keyValues.get("packageCode");
+
+        FileEntity entity = fileRepository.findActiveByFileTypeAndProductCodeAndPackageCode(fileType, productCode, Integer.parseInt(packageCode))
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+        return process(entity.getId(), keyValues);
     }
 
     private long nextId() {
