@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: pt-app
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/pt_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        '[jdbc.time_zone]': UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    clean-disabled: false
+  jackson:
+    serialization:
+      '[WRITE_DATES_AS_TIMESTAMPS]': false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+# OAuth2 Provider Configuration Examples
+# Uncomment and configure as needed for external IdPs
+
+#spring:
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          google:
+#            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+#            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-secret}
+#            scope: openid,profile,email
+#          github:
+#            client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
+#            client-secret: ${GITHUB_CLIENT_SECRET:your-github-secret}
+#            scope: user:email,read:user
+#        provider:
+#          google:
+#            authorization-uri: https://accounts.google.com/o/oauth2/auth
+#            token-uri: https://oauth2.googleapis.com/token
+#            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+#            user-name-attribute: id
+#          github:
+#            authorization-uri: https://github.com/login/oauth/authorize
+#            token-uri: https://github.com/login/oauth/access_token
+#            user-info-uri: https://api.github.com/user
+
