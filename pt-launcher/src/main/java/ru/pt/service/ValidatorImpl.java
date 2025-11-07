@@ -1,11 +1,11 @@
 package ru.pt.service;
 
+import ru.pt.api.dto.product.LobVar;
+import ru.pt.api.dto.product.VarDataType;
+
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
-import ru.pt.domain.lob.LobVar;
-import ru.pt.domain.lob.VarDataType;
 
 public class ValidatorImpl {
 

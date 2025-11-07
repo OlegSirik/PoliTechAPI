@@ -3,10 +3,10 @@ package ru.pt.api;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import ru.pt.domain.lob.LobModel;
-import ru.pt.domain.lob.LobVar;
+import ru.pt.api.dto.product.LobModel;
+import ru.pt.api.dto.product.LobVar;
+import ru.pt.api.service.product.LobService;
 import ru.pt.hz.JsonExampleBuilder;
-import ru.pt.service.LobService;
 
 import java.util.List;
 import java.util.Map;
@@ -68,7 +68,11 @@ public class AdminLobController {
             return ResponseEntity.notFound().build();
         }
         try {
-            String jsonExample = JsonExampleBuilder.buildJsonExample(lob.getMpVars().stream().map(LobVar::getVarPath).collect(Collectors.toList()));
+            String jsonExample = JsonExampleBuilder.buildJsonExample(
+                    lob.getMpVars().stream()
+                    .map(LobVar::getVarPath)
+                    .collect(Collectors.toList())
+            );
             return ResponseEntity.ok(jsonExample);
         } catch (Exception e) {
             e.printStackTrace();

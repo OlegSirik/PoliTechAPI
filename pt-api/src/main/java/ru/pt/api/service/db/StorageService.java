@@ -22,6 +22,8 @@ public interface StorageService {
      */
     PolicyData save(String policy, UserData userData, Version version, UUID uuid);
 
+    void update(PolicyData policyData);
+
     /**
      * Обновить полис в статусе NEW, оплаченные не обновляем
      * Между тем это интерфейс хранилища - проверка статуса должна быть перед вызовом этого метода

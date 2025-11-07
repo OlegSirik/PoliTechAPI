@@ -271,7 +271,7 @@ public class ProductServiceImpl implements ProductService {
         jsonPaths.add("issueDate");
         jsonValues.put("issueDate", OffsetDateTime.now().toString());
 
-        if ( productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST") ) {
+        if (productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST")) {
             String value = productVersionModel.getWaitingPeriod().getValidatorValue().split(",")[0].trim();
             jsonPaths.add("waitingPeriod");
             jsonValues.put("waitingPeriod", value);
@@ -280,7 +280,7 @@ public class ProductServiceImpl implements ProductService {
             jsonValues.put("startDate", OffsetDateTime.now().toString());
         }
 
-        if ( productVersionModel.getPolicyTerm().getValidatorType().equals("LIST") ) {
+        if (productVersionModel.getPolicyTerm().getValidatorType().equals("LIST")) {
             String value = productVersionModel.getPolicyTerm().getValidatorValue().split(",")[0].trim();
             jsonPaths.add("policyTerm");
             jsonValues.put("policyTerm", value);
@@ -324,7 +324,7 @@ public class ProductServiceImpl implements ProductService {
         jsonPaths.add("issueDate");
         jsonValues.put("issueDate", OffsetDateTime.now().toString());
 
-        if ( productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST") ) {
+        if (productVersionModel.getWaitingPeriod().getValidatorType().equals("LIST")) {
             String value = productVersionModel.getWaitingPeriod().getValidatorValue().split(",")[0].trim();
             jsonPaths.add("waitingPeriod");
             jsonValues.put("waitingPeriod", value);
@@ -333,7 +333,7 @@ public class ProductServiceImpl implements ProductService {
             jsonValues.put("startDate", OffsetDateTime.now().toString());
         }
 
-        if ( productVersionModel.getPolicyTerm().getValidatorType().equals("LIST") ) {
+        if (productVersionModel.getPolicyTerm().getValidatorType().equals("LIST")) {
             String value = productVersionModel.getPolicyTerm().getValidatorValue().split(",")[0].trim();
             jsonPaths.add("policyTerm");
             jsonValues.put("policyTerm", value);
@@ -363,6 +363,38 @@ public class ProductServiceImpl implements ProductService {
             return JsonExampleBuilder.buildJsonExampleProduct(jsonPaths, jsonValues);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    @Override
+    public ProductVersionModel getProduct(Integer id, boolean forDev) {
+        var entity = productRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        var versionNo = forDev ? entity.getDevVersionNo() : entity.getProdVersionNo();
+        var pv = productVersionRepository.findByProductIdAndVersionNo(entity.getId(), versionNo)
+                .orElseThrow();
+        try {
+            return objectMapper.readValue(pv.getProduct(), ProductVersionModel.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    //get product by code and isDeletedFalse
+    @Override
+    public ProductVersionModel getProductByCode(String code, boolean forDev) {
+        var entity = productRepository.findByCodeAndIsDeletedFalse(code)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        var versionNo = forDev ? entity.getDevVersionNo() : entity.getProdVersionNo();
+
+        var pv = productVersionRepository.findByProductIdAndVersionNo(entity.getId(), entity.getProdVersionNo())
+                .orElseThrow();
+        try {
+            return objectMapper.readValue(pv.getProduct(), ProductVersionModel.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 

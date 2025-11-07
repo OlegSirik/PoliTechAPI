@@ -2,10 +2,8 @@ package ru.pt.api;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.pt.domain.productVersion.ProductVersionModel;
-import ru.pt.service.ProductService;
-import ru.pt.service.LobService;
-import ru.pt.domain.lob.LobModel;
+import ru.pt.api.dto.product.ProductVersionModel;
+import ru.pt.api.service.product.ProductService;
 
 import java.util.List;
 import java.util.Map;
@@ -15,11 +13,9 @@ import java.util.Map;
 public class AdminProductController {
 
     private final ProductService productService;
-    private final LobService lobService;
 
-    public AdminProductController(ProductService productService, LobService lobService) {
+    public AdminProductController(ProductService productService) {
         this.productService = productService;
-        this.lobService = lobService;
     }
 
     @GetMapping
@@ -40,7 +36,7 @@ public class AdminProductController {
 
     @PostMapping("/{id}/versions/{versionNo}/cmd/create")
     public ResponseEntity<ProductVersionModel> createVersion(@PathVariable("id") Integer id, @PathVariable("versionNo") Integer versionNo) {
-        return ResponseEntity.ok(productService.createVersionFrom(id, versionNo).getProduct());
+        return ResponseEntity.ok(productService.createVersionFrom(id, versionNo));
     }
 
     @PutMapping("/{id}/versions/{versionNo}")

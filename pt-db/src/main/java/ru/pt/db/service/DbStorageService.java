@@ -56,6 +56,15 @@ public class DbStorageService implements StorageService {
     }
 
     @Override
+    public void update(PolicyData policyData) {
+        policyIndexRepository.save(policyMapper.toEntity(policyData.getPolicyIndex()));
+        PolicyEntity policyEntity = new PolicyEntity();
+        policyEntity.setPolicy(policyData.getPolicy());
+        policyEntity.setId(policyData.getPolicyId());
+        policyRepository.save(policyEntity);
+    }
+
+    @Override
     @Transactional
     public PolicyData update(String policy, UserData userData, Version version, String policyNumber) {
         return policyIndexRepository.findPolicyIndexEntityByPolicyNumber(policyNumber)

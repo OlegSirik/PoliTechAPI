@@ -1,9 +1,10 @@
 package ru.pt.domain.calculator;
 
+import ru.pt.api.dto.product.LobVar;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import ru.pt.domain.lob.LobVar;
 
 /**
  * Domain model representing calculator JSON structure from scripts/calculator.txt

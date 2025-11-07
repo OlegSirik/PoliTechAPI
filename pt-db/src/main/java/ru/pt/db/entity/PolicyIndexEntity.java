@@ -14,7 +14,7 @@ import java.util.UUID;
 public class PolicyIndexEntity {
 
     @Id
-    @Column(name = "policyId")
+    @Column(name = "id")
     private UUID policyId;
 
     @Column(name = "policy_nr", length = 30)

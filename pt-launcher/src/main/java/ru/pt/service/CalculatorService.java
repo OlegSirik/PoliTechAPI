@@ -2,36 +2,32 @@ package ru.pt.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.pt.api.dto.product.LobModel;
+import ru.pt.api.dto.product.LobVar;
+import ru.pt.api.dto.product.ProductVersionModel;
+import ru.pt.api.service.product.LobService;
+import ru.pt.api.service.product.ProductService;
 import ru.pt.domain.CalculatorEntity;
-import ru.pt.domain.Product;
 import ru.pt.domain.calculator.CalculatorModel;
 import ru.pt.domain.calculator.CoefficientDef;
 import ru.pt.domain.calculator.FormulaDef;
 import ru.pt.domain.calculator.FormulaLine;
-
-import ru.pt.domain.lob.LobModel;
-import ru.pt.domain.lob.LobVar;
-import ru.pt.domain.productVersion.ProductVersionModel;
 import ru.pt.repository.CalculatorRepository;
-import ru.pt.repository.LobRepository;
-import ru.pt.repository.ProductRepository;
-import ru.pt.repository.ProductVersionRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
 
 @Service
 public class CalculatorService {
 
     private final CalculatorRepository calculatorRepository;
-
     private final CoefficientService coefficientService;
     private final ProductService productService;
-    private final LobService lobService;  
+    private final LobService lobService;
 
-    public CalculatorService(CalculatorRepository calculatorRepository, ProductRepository productRepository, ProductVersionRepository productVersionRepository, LobRepository lineOfBusinessRepository, CoefficientService coefficientService, ProductService productService, LobService lobService) {
+    public CalculatorService(CalculatorRepository calculatorRepository, CoefficientService coefficientService, ProductService productService, LobService lobService) {
         this.calculatorRepository = calculatorRepository;
         this.coefficientService = coefficientService;
         this.productService = productService;
@@ -52,21 +48,12 @@ public class CalculatorService {
                 .orElseGet(() -> {
                     // get product, product version and line of business from services
                     // Example:
-                    Product product = productService.getProduct(productId);
+                    ru.pt.api.dto.product.ProductVersionModel productVersionModel = productService.getProduct(productId, true);
 
-                    if (product.getDevVersionNo() == null) {
-                        throw new IllegalArgumentException("Product has no dev version");
-                    }
-
-                    ProductVersionModel productVersion = productService.getVersion(productId, product.getDevVersionNo());
-                    if (productVersion == null) {
-                        throw new IllegalArgumentException("Product version not found: " + product.getDevVersionNo());
-                    }
-                    
-                    LobModel lobModel = lobService.getByCode(product.getLob());
+                    LobModel lobModel = lobService.getByCode(productVersionModel.getLob());
 
                     if (lobModel == null) {
-                        throw new IllegalArgumentException("LOB not found: " + product.getLob());
+                        throw new IllegalArgumentException("LOB not found: " + productVersionModel.getLob());
                     }
 
                     Integer id = calculatorRepository.nextCalculatorId();
@@ -81,14 +68,13 @@ public class CalculatorService {
                     calculatorModel.setFormulas(new ArrayList<>());
                     calculatorModel.setCoefficients(new ArrayList<>());
 
-                
-                    lobModel.getMpVars().forEach(var -> {
-                        calculatorModel.getVars().add(var);
-                    });
-                   
+
+                    lobModel.getMpVars()
+                            .forEach(var -> calculatorModel.getVars().add(var));
+
                     // INSERT_YOUR_CODE
                     // Find the package in productVersion.packages with code == packageNo
-                    productVersion.getPackages().forEach(pkg -> {
+                    productVersionModel.getPackages().forEach(pkg -> {
 
                         if (pkg.getCode().equals(packageNo)) {
                             pkg.getCovers().forEach(cover -> {
@@ -97,31 +83,31 @@ public class CalculatorService {
                                 var.setVarName(cover.getCode() + " Страховая сумма");
                                 var.setVarType("VAR");
                                 calculatorModel.getVars().add(var);
-                                
+
                                 var = new LobVar();
                                 var.setVarCode(cover.getCode() + "_Prem");
                                 var.setVarName(cover.getCode() + " Премия");
                                 var.setVarType("VAR");
                                 calculatorModel.getVars().add(var);
-                                
+
                                 var = new LobVar();
                                 var.setVarCode(cover.getCode() + "_DedNr");
                                 var.setVarName(cover.getCode() + " Номер франшизы");
                                 var.setVarType("VAR");
                                 calculatorModel.getVars().add(var);
-                                
-                             });
+
+                            });
                         }
                     });
-                    
+
                     FormulaDef formulaDef = new FormulaDef();
                     formulaDef.setVarCode("pkg" + packageNo + "_formula");
                     formulaDef.setVarName("Calculator for package:" + packageNo);
-                   
+
                     formulaDef.setLines(new ArrayList<>());
                     calculatorModel.getFormulas().add(formulaDef);
-                    
-                     
+
+
                     CalculatorEntity e = new CalculatorEntity();
                     e.setId(id);
                     e.setProductId(productId);
@@ -182,10 +168,8 @@ public class CalculatorService {
             }
         }
 
-
-
         if (model.getFormulas() != null && !model.getFormulas().isEmpty()) {
-            FormulaDef f = model.getFormulas().get(0);
+            FormulaDef f = model.getFormulas().getFirst();
             // Для пакета есть только 1 формула. Поэтому берем всегда 0-й элемент
             // сортируем строки формулы по nr
             // INSERT_YOUR_CODE
@@ -200,18 +184,18 @@ public class CalculatorService {
             });
 
             for (FormulaLine line : lines) {
-                
+
                 if (line.getConditionOperator() != "" && line.getConditionLeft() != "") {
                     if (!ValidatorImpl.validate(modelVars, line.getConditionLeft(), line.getConditionOperator(), line.getConditionRight(), line.getConditionOperator())) {
                         continue;
                     }
                 }
-                
+
                 LobVar lv = modelVars.stream().filter(v -> v.getVarCode().equals(line.getExpressionLeft())).findFirst().orElse(null);
                 LobVar rv = modelVars.stream().filter(v -> v.getVarCode().equals(line.getExpressionRight())).findFirst().orElse(null);
 
 
-                if ( lv != null && lv.getVarType().equals("COEFFICIENT") ) {
+                if (lv != null && lv.getVarType().equals("COEFFICIENT")) {
                     CoefficientDef cd = model.getCoefficients().stream().filter(c -> c.getVarCode().equals(lv.getVarCode())).findFirst().orElse(null);
                     if (cd != null) {
                         Map<String, String> modelVarsMap = modelVars.stream().collect(Collectors.toMap(LobVar::getVarCode, LobVar::getVarValue));
@@ -219,7 +203,7 @@ public class CalculatorService {
                         lv.setVarValue(s);
                     }
                 }
-                if ( rv != null && rv.getVarType().equals("COEFFICIENT") ) {
+                if (rv != null && rv.getVarType().equals("COEFFICIENT")) {
                     CoefficientDef cd = model.getCoefficients().stream().filter(c -> c.getVarCode().equals(rv.getVarCode())).findFirst().orElse(null);
                     if (cd != null) {
                         Map<String, String> modelVarsMap = modelVars.stream().collect(Collectors.toMap(LobVar::getVarCode, LobVar::getVarValue));
@@ -231,13 +215,13 @@ public class CalculatorService {
                 Double dlv = null;
                 Double drv = null;
 
-                if ( lv != null ) {
+                if (lv != null) {
                     dlv = tryParseDouble(lv);
                 }
-                if ( rv != null ) {
+                if (rv != null) {
                     drv = tryParseDouble(rv);
                 }
-                
+
 
                 Double res = compute(dlv, line.getExpressionOperator(), drv);
                 if (line.getPostProcessor() != null) {
@@ -245,7 +229,7 @@ public class CalculatorService {
                 }
 
                 if (line.getExpressionResult() != null && line.getExpressionResult() != "") {
-                    modelVars.stream().filter(v -> v.getVarCode().equals(line.getExpressionResult())).findFirst().orElse(null).setVarValue(res==null ? null : res.toString());
+                    modelVars.stream().filter(v -> v.getVarCode().equals(line.getExpressionResult())).findFirst().orElse(null).setVarValue(res == null ? null : res.toString());
                 }
             }
         }
@@ -253,11 +237,10 @@ public class CalculatorService {
         return modelVars;
     }
 
- 
 
     private Double compute(Double left, String operator, Double right) {
         if (operator == null || operator.isBlank()) return left == null ? null : left;
-        
+
         switch (operator.trim()) {
             case "+":
                 if (left != null && right != null) return trimZeros(left + right);
@@ -290,7 +273,10 @@ public class CalculatorService {
             if ("round2".equals(pp)) scale = 2;
             else {
                 String digits = pp.replaceAll("[^0-9]", "");
-                if (!digits.isEmpty()) try { scale = Integer.parseInt(digits); } catch (Exception ignored) {}
+                if (!digits.isEmpty()) try {
+                    scale = Integer.parseInt(digits);
+                } catch (Exception ignored) {
+                }
             }
             Double d = value;
             if (d != null) {
@@ -304,10 +290,12 @@ public class CalculatorService {
 
     private Double tryParseDouble(LobVar s) {
         if (s == null) return null;
-        
-        try { 
-            return Double.parseDouble(s.getVarValue()); 
-        } catch (Exception e) { return null; }
+
+        try {
+            return Double.parseDouble(s.getVarValue());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Double trimZeros(double d) {
@@ -327,17 +315,17 @@ public class CalculatorService {
     }
 
     public CalculatorModel replaceCalculator(Integer productId, String productCode, Integer versionNo,
-            Integer packageNo, CalculatorModel newJson) {
+                                             Integer packageNo, CalculatorModel newJson) {
         CalculatorEntity entity = calculatorRepository.findByKeys(productId, versionNo, packageNo)
                 .orElseThrow(() -> new IllegalArgumentException("Calculator not found for productId=" + productId + ", versionNo=" + versionNo + ", packageNo=" + packageNo));
 
-                newJson.setProductId(productId);
-                newJson.setProductCode(productCode);
-                newJson.setVersionNo(versionNo);
-                newJson.setPackageNo(packageNo);
+        newJson.setProductId(productId);
+        newJson.setProductCode(productCode);
+        newJson.setVersionNo(versionNo);
+        newJson.setPackageNo(packageNo);
 
-                entity.setCalculator(newJson);
-                
+        entity.setCalculator(newJson);
+
         CalculatorEntity saved = calculatorRepository.save(entity);
         return saved.getCalculator();
     }
@@ -351,23 +339,23 @@ public class CalculatorService {
         if (calculatorModel == null) {
             throw new IllegalStateException("Calculator JSON is null for id=" + calculatorId);
         }
-        // get product from repository
-        Product product = productService.getProduct(entity.getProductId());
-        if (product == null) {
+        // get productVersionModel from repository
+        ProductVersionModel productVersionModel = productService.getProduct(entity.getProductId(), false);
+        if (productVersionModel == null) {
             throw new IllegalArgumentException("Product not found for id=" + entity.getProductId());
         }
-                
-        // get product version from repository
+
+        // get productVersionModel version from repository
         ProductVersionModel productVersion = productService.getVersion(entity.getProductId(), entity.getVersionNo());
         if (productVersion == null) {
             throw new IllegalArgumentException("Product version not found for id=" + entity.getProductId() + " and versionNo=" + entity.getVersionNo());
         }
-            
-            
+
+
         // get lob from repository
-        LobModel lobModel = lobService.getByCode(product.getLob());
+        LobModel lobModel = lobService.getByCode(productVersionModel.getLob());
         if (lobModel == null) {
-            throw new IllegalArgumentException("LOB not found for code=" + product.getLob());
+            throw new IllegalArgumentException("LOB not found for code=" + productVersionModel.getLob());
         }
 
 
