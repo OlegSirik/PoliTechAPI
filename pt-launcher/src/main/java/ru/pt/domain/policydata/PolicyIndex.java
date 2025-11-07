@@ -1,11 +1,10 @@
+/*
 package ru.pt.domain.policydata;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
-/**
- * Entity for policy index - provides fast search capabilities
- */
+
 @Entity
 @Table(name = "policy_index")
 public class PolicyIndex {
@@ -183,3 +182,4 @@ public class PolicyIndex {
 }
 
 
+*/

@@ -36,8 +36,6 @@ import ru.pt.domain.policy.Cover;
 import ru.pt.domain.policy.CoverInfo;
 import ru.pt.domain.policy.InsuredObject;
 import ru.pt.domain.policy.Policy;
-import ru.pt.domain.policydata.PolicyData;
-import ru.pt.domain.policydata.PolicyIndex;
 import ru.pt.domain.productVersion.ProductVersionModel;
 import ru.pt.domain.productVersion.PvCover;
 import ru.pt.domain.productVersion.PvDeductible;
@@ -50,13 +48,8 @@ import ru.pt.exception.BadRequestException;
 
 import ru.pt.hz.PeriodUtils;
 import ru.pt.repository.FileRepository;
-import ru.pt.repository.PolicyDataRepository;
-import ru.pt.repository.PolicyIndexRepository;
 
 import ru.pt.repository.ProductVersionRepository;
-import jakarta.transaction.Transactional;
-
-import java.time.LocalDate;
 
 
 @Service

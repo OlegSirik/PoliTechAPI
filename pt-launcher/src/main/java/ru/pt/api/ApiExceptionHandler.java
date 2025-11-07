@@ -39,7 +39,7 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ex.getErrorModel());
     }
-
+    // TODO 2 ниже удалить
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorModel> handleIllegalArgument(IllegalArgumentException ex) {
         ErrorModel errorModel = new ErrorModel(400, ex.getMessage());

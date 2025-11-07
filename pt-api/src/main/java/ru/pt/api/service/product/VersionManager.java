@@ -1,9 +1,10 @@
-package ru.pt.api.service.versioning;
+package ru.pt.api.service.product;
 
 import ru.pt.api.dto.versioning.Version;
 
 /**
  * Управление версиями внутри приложения
+ * Версия относится к продукту, поэтому в этом модуле, а не в отдельном
  */
 public interface VersionManager {
 
@@ -12,7 +13,14 @@ public interface VersionManager {
      * @param policyNumber номер полиса
      * @return версия
      */
-    Version getVersion(String policyNumber);
+    Version getVersionByPolicyNumber(String policyNumber);
+
+    /**
+     * Получить последнюю версию по коду продукта
+     * @param productCode код продукта
+     * @return версия
+     */
+    Version getLatestVersionByProductCode(String productCode);
 
     /**
      * Установить версию для договора

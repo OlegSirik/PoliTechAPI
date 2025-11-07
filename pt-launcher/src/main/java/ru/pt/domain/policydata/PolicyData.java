@@ -1,3 +1,4 @@
+/*
 package ru.pt.domain.policydata;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -5,9 +6,6 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Entity for storing complete policy data as JSON
- */
 @Entity
 @Table(name = "policy_data")
 public class PolicyData {
@@ -48,3 +46,4 @@ public class PolicyData {
 }
 
 
+*/

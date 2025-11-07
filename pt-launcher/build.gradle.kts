@@ -30,6 +30,8 @@ dependencies {
 
     implementation(project(":pt-api"))
     implementation(project(":pt-numbers"))
+    implementation(project(":pt-db"))
+    implementation(project(":pt-process"))
 
     // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-web")
