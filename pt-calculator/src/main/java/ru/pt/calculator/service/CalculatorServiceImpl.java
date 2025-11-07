@@ -1,43 +1,58 @@
-package ru.pt.service;
+package ru.pt.calculator.service;
 
-import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import ru.pt.api.dto.calculator.CalculatorModel;
+import ru.pt.api.dto.calculator.CoefficientDef;
+import ru.pt.api.dto.calculator.FormulaDef;
+import ru.pt.api.dto.calculator.FormulaLine;
 import ru.pt.api.dto.product.LobModel;
 import ru.pt.api.dto.product.LobVar;
 import ru.pt.api.dto.product.ProductVersionModel;
+import ru.pt.api.service.calculator.CalculatorService;
+import ru.pt.api.service.calculator.CoefficientService;
 import ru.pt.api.service.product.LobService;
 import ru.pt.api.service.product.ProductService;
-import ru.pt.domain.CalculatorEntity;
-import ru.pt.domain.calculator.CalculatorModel;
-import ru.pt.domain.calculator.CoefficientDef;
-import ru.pt.domain.calculator.FormulaDef;
-import ru.pt.domain.calculator.FormulaLine;
-import ru.pt.repository.CalculatorRepository;
+import ru.pt.calculator.entity.CalculatorEntity;
+import ru.pt.calculator.repository.CalculatorRepository;
+import ru.pt.calculator.utils.ValidatorImpl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-@Service
-public class CalculatorService {
+@Component
+public class CalculatorServiceImpl implements CalculatorService {
 
     private final CalculatorRepository calculatorRepository;
     private final CoefficientService coefficientService;
     private final ProductService productService;
     private final LobService lobService;
+    private final ObjectMapper objectMapper;
 
-    public CalculatorService(CalculatorRepository calculatorRepository, CoefficientService coefficientService, ProductService productService, LobService lobService) {
+    public CalculatorServiceImpl(CalculatorRepository calculatorRepository, CoefficientService coefficientService, ProductService productService, LobService lobService, ObjectMapper objectMapper) {
         this.calculatorRepository = calculatorRepository;
         this.coefficientService = coefficientService;
         this.productService = productService;
         this.lobService = lobService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
     public CalculatorModel getCalculator(Integer productId, Integer versionNo, Integer packageNo) {
         return calculatorRepository.findByKeys(productId, versionNo, packageNo)
                 .map(CalculatorEntity::getCalculator)
+                .map(c -> {
+                    try {
+                        return objectMapper.readValue(c, CalculatorModel.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .orElse(null);
     }
 
@@ -45,6 +60,13 @@ public class CalculatorService {
     public CalculatorModel createCalculatorIfMissing(Integer productId, String productCode, Integer versionNo, Integer packageNo) {
         return calculatorRepository.findByKeys(productId, versionNo, packageNo)
                 .map(CalculatorEntity::getCalculator)
+                .map(c -> {
+                    try {
+                        return objectMapper.readValue(c, CalculatorModel.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .orElseGet(() -> {
                     // get product, product version and line of business from services
                     // Example:
@@ -115,10 +137,21 @@ public class CalculatorService {
                     e.setVersionNo(versionNo);
                     e.setPackageNo(packageNo);
                     calculatorModel.setId(id);
-                    e.setCalculator(calculatorModel);
+                    String calculatorJson;
+                    try {
+                        calculatorJson = objectMapper.writeValueAsString(calculatorModel);
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    e.setCalculator(calculatorJson);
                     CalculatorEntity saved = calculatorRepository.save(e);
 
-                    return saved.getCalculator();
+                    String savedCalculatorJson = saved.getCalculator();
+                    try {
+                        return objectMapper.readValue(savedCalculatorJson, CalculatorModel.class);
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 });
     }
 
@@ -126,7 +159,13 @@ public class CalculatorService {
     public CalculatorModel getCalculatorModel(Integer productId, Integer versionNo, Integer packageNo) {
         CalculatorEntity entity = calculatorRepository.findByKeys(productId, versionNo, packageNo)
                 .orElseThrow(() -> new IllegalArgumentException("Calculator not found for productId=" + productId + ", versionNo=" + versionNo + ", packageNo=" + packageNo));
-        CalculatorModel calculatorModel = entity.getCalculator();
+        String calculatorJson = entity.getCalculator();
+        CalculatorModel calculatorModel = null;
+        try {
+            calculatorModel = objectMapper.readValue(calculatorJson, CalculatorModel.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         if (calculatorModel == null) {
             throw new IllegalStateException("Calculator JSON is null for productId=" + productId + ", versionNo=" + versionNo + ", packageNo=" + packageNo);
         }
@@ -185,7 +224,7 @@ public class CalculatorService {
 
             for (FormulaLine line : lines) {
 
-                if (line.getConditionOperator() != "" && line.getConditionLeft() != "") {
+                if (!Objects.equals(line.getConditionOperator(), "") && !Objects.equals(line.getConditionLeft(), "")) {
                     if (!ValidatorImpl.validate(modelVars, line.getConditionLeft(), line.getConditionOperator(), line.getConditionRight(), line.getConditionOperator())) {
                         continue;
                     }
@@ -324,10 +363,22 @@ public class CalculatorService {
         newJson.setVersionNo(versionNo);
         newJson.setPackageNo(packageNo);
 
-        entity.setCalculator(newJson);
+        String calculatorJson;
+        try {
+            calculatorJson = objectMapper.writeValueAsString(newJson);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        entity.setCalculator(calculatorJson);
 
         CalculatorEntity saved = calculatorRepository.save(entity);
-        return saved.getCalculator();
+        String calculator = saved.getCalculator();
+        try {
+            return objectMapper.readValue(calculator, CalculatorModel.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void syncVars(Integer calculatorId) {
@@ -335,7 +386,13 @@ public class CalculatorService {
         // get calculator by id from repository
         CalculatorEntity entity = calculatorRepository.findById(calculatorId)
                 .orElseThrow(() -> new IllegalArgumentException("Calculator not found for id=" + calculatorId));
-        CalculatorModel calculatorModel = entity.getCalculator();
+        String calculatorModelJson = entity.getCalculator();
+        CalculatorModel calculatorModel;
+        try {
+            calculatorModel = objectMapper.readValue(calculatorModelJson, CalculatorModel.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         if (calculatorModel == null) {
             throw new IllegalStateException("Calculator JSON is null for id=" + calculatorId);
         }
@@ -370,6 +427,5 @@ public class CalculatorService {
         // save calculator
         calculatorRepository.save(entity);
     }
+
 }
-
-

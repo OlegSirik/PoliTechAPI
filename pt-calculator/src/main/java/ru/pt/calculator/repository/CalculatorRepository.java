@@ -1,9 +1,9 @@
-package ru.pt.repository;
+package ru.pt.calculator.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ru.pt.domain.CalculatorEntity;
+import ru.pt.calculator.entity.CalculatorEntity;
 
 import java.util.Optional;
 
@@ -17,5 +17,3 @@ public interface CalculatorRepository extends JpaRepository<CalculatorEntity, In
     @Query("select nextval('pt_seq')")
     Integer nextCalculatorId();
 }
-
-

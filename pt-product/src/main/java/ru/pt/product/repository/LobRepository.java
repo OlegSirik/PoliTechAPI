@@ -12,10 +12,10 @@ public interface LobRepository extends JpaRepository<LobEntity, Integer> {
 
     Optional<LobEntity> findByCodeAndIsDeletedFalse(String code);
 
-    @Query("select l from Lob l where l.id = :id and l.isDeleted = false")
+    @Query("select l from LobEntity l where l.id = :id and l.isDeleted = false")
     Optional<LobEntity> findActiveById(@Param("id") Integer id);
 
-    @Query("select l.id as id, l.code as code, l.name as name from Lob l where l.isDeleted = false order by l.code")
+    @Query("select l.id as id, l.code as code, l.name as name from LobEntity l where l.isDeleted = false order by l.code")
     List<Object[]> listActiveSummaries();
 
     @Query("select nextval('pt_seq')")

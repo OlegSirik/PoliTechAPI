@@ -1,4 +1,4 @@
-package ru.pt.domain.productVersion;
+package ru.pt.api.dto.process;
 
 public enum ValidatorType {
     QUOTE("QUOTE"),
@@ -12,6 +12,6 @@ public enum ValidatorType {
     public String getValue() {
         return value;
     }
-        
-    
+
+
 }

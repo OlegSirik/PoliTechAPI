@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.stereotype.Service;
+import ru.pt.api.dto.process.ValidatorType;
 import ru.pt.api.dto.product.*;
+import ru.pt.api.service.calculator.CalculatorService;
 import ru.pt.api.service.numbers.NumberGeneratorService;
 import ru.pt.api.service.product.LobService;
 import ru.pt.api.service.product.ProductService;
@@ -20,7 +22,6 @@ import ru.pt.domain.policy.Cover;
 import ru.pt.domain.policy.CoverInfo;
 import ru.pt.domain.policy.InsuredObject;
 import ru.pt.domain.policy.Policy;
-import ru.pt.domain.productVersion.ValidatorType;
 import ru.pt.exception.BadRequestException;
 import ru.pt.hz.PeriodUtils;
 import ru.pt.repository.FileRepository;
@@ -63,14 +64,14 @@ public class PolicyService {
     }
 
     public ObjectNode quoteValidator(String requestBody) {
-        return Validator(requestBody, ValidatorType.QUOTE);
+        return createValidator(requestBody, ValidatorType.QUOTE);
     }
 
     public ObjectNode saveValidator(String requestBody) {
-        return Validator(requestBody, ValidatorType.SAVE);
+        return createValidator(requestBody, ValidatorType.SAVE);
     }
 
-    public ObjectNode Validator(String requestBody, ValidatorType validatorType) {
+    public ObjectNode createValidator(String requestBody, ValidatorType validatorType) {
         List<ValidationError> errorModel = new ArrayList<ValidationError>();
 
         try {
@@ -594,12 +595,12 @@ public class PolicyService {
 
     public ObjectNode quoteCalculator(String requestBody) {
 
-        return Validator(requestBody, ValidatorType.QUOTE);
+        return createValidator(requestBody, ValidatorType.QUOTE);
 
     }
 
     public ObjectNode policyValidator(String requestBody) {
-        return Validator(requestBody, ValidatorType.SAVE);
+        return createValidator(requestBody, ValidatorType.SAVE);
     }
 
     public String policyCalculator(String requestBody) {

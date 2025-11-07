@@ -6,9 +6,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import ru.pt.domain.calculator.CalculatorModel;
-import ru.pt.service.CalculatorService;
-import ru.pt.service.CoefficientService;
+import ru.pt.api.dto.calculator.CalculatorModel;
+import ru.pt.api.service.calculator.CalculatorService;
+import ru.pt.api.service.calculator.CoefficientService;
+
 
 @RestController
 @RequestMapping("/admin")
@@ -80,6 +81,7 @@ public class AdminCalculatorController {
         calculateService.syncVars(calculatorId);
         return ResponseEntity.ok().build();
     }
+
 }
 
 

@@ -17,7 +17,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
     List<ProductEntity> listActive();
 
     // TODO выше точно такой же метод
-    @Query("select p.id, p.lob, p.code, p.name, p.prodVersionNo, p.devVersionNo from Product p where p.isDeleted = false order by p.code")
+    @Query("select p.id, p.lob, p.code, p.name, p.prodVersionNo, p.devVersionNo from ProductEntity p where p.isDeleted = false order by p.code")
     List<Object[]> listActiveSummaries();
 
     @Query(value = "SELECT nextval('pt_seq')", nativeQuery = true)

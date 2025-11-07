@@ -9,6 +9,7 @@ import ru.pt.api.dto.db.PolicyIndex;
 import ru.pt.api.dto.db.PolicyStatus;
 import ru.pt.api.dto.exception.BadRequestException;
 import ru.pt.api.dto.payment.PaymentData;
+import ru.pt.api.dto.product.ProductVersionModel;
 import ru.pt.api.dto.versioning.Version;
 import ru.pt.api.service.db.StorageService;
 import ru.pt.api.service.numbers.NumberGeneratorService;
@@ -38,6 +39,15 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
     // TODO нужен модуль калькулятора
     @Override
     public String calculate(String policy) {
+
+        var projection = new JsonProjection(policy);
+
+        var productCode = projection.getProductCode();
+
+        var version = versionManager.getLatestVersionByProductCode(productCode);
+
+        var product = productService.getProductByCode(productCode, false);
+        // TODO доделать + проверить логику
         return "";
     }
 

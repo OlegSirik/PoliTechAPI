@@ -5,11 +5,9 @@ import com.jayway.jsonpath.JsonPath;
 
 public class JsonProjection {
 
-    private final String json;
     private final DocumentContext documentContext;
 
     public JsonProjection(String json) {
-        this.json = json;
         this.documentContext = JsonPath.parse(json);
     }
 
