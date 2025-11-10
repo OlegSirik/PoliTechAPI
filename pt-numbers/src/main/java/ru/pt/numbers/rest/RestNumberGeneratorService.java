@@ -21,7 +21,7 @@ public class RestNumberGeneratorService {
 
 
     @GetMapping("/next")
-    public ResponseEntity<String> getNextNumber(Map<String, String> values, String productCode) {
+    public ResponseEntity<String> getNextNumber(Map<String, Object> values, String productCode) {
         return ResponseEntity.ok(numberGeneratorService.getNextNumber(values, productCode));
     }
 

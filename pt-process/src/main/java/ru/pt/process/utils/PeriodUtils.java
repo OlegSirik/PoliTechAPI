@@ -1,13 +1,11 @@
 package ru.pt.process.utils;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.ZonedDateTime;
 
-import ru.pt.exception.BadRequestException;
-
 public class PeriodUtils {
+
     public static int comparePeriods(Period p1, Period p2) {
         // Опорная дата
         LocalDate base = LocalDate.now();

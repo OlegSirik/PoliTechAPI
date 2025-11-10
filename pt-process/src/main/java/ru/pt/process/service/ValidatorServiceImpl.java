@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 import org.springframework.stereotype.Component;
 import ru.pt.api.dto.errors.ErrorModel;
 import ru.pt.api.dto.errors.ValidationError;
@@ -18,6 +16,7 @@ import ru.pt.api.dto.product.*;
 import ru.pt.api.service.calculator.CalculatorService;
 import ru.pt.api.service.numbers.NumberGeneratorService;
 import ru.pt.api.service.process.PostProcessService;
+import ru.pt.api.service.process.PreProcessService;
 import ru.pt.api.service.process.ValidatorService;
 import ru.pt.api.service.product.LobService;
 import ru.pt.api.service.product.ProductService;
@@ -43,13 +42,14 @@ public class ValidatorServiceImpl implements ValidatorService {
     private final CalculatorService calculatorService;
     private final NumberGeneratorService numberGeneratorService;
     private final PostProcessService postProcessService;
+    private final PreProcessService preProcessService;
 
     public ValidatorServiceImpl(
             ObjectMapper objectMapper,
             ProductService productService,
             LobService lobService,
             CalculatorService calculatorService,
-            NumberGeneratorService numberGeneratorService, PostProcessService postProcessService
+            NumberGeneratorService numberGeneratorService, PostProcessService postProcessService, PreProcessService preProcessService
     ) {
         this.objectMapper = objectMapper;
         this.productService = productService;
@@ -57,6 +57,7 @@ public class ValidatorServiceImpl implements ValidatorService {
         this.calculatorService = calculatorService;
         this.numberGeneratorService = numberGeneratorService;
         this.postProcessService = postProcessService;
+        this.preProcessService = preProcessService;
     }
 
     @Override
@@ -69,58 +70,20 @@ public class ValidatorServiceImpl implements ValidatorService {
     public ObjectNode createValidator(String requestBody, ValidatorType validatorType) {
         List<ValidationError> errorModel = new ArrayList<>();
 
-        JsonProjection projection = new JsonProjection(requestBody);
-
-        JsonSetter setter = new JsonSetter(requestBody);
-
         try {
-
-            DocumentContext ctx = JsonPath.parse(requestBody);
+            JsonProjection projection = new JsonProjection(requestBody);
 
             String productCode = projection.getProductCode();
-            Integer packageCode = projection.getPackageCode();
+
+            ObjectNode response = objectMapper.createObjectNode();
 
             ProductVersionModel productVersionModel = productService.getProductByCode(productCode, true);
 
             LobModel lobModel = lobService.getByCode(productVersionModel.getLob());
 
-            // Policy
-            if (projection.getIssueDate() == null) {
-                setter.setRawValue("issueDate", ZonedDateTime.now().toString());
-            }
-
-            // TODO add time zone
-            try {
-                String newJson = setActivationDelay(setter.writeValue(), productVersionModel);
-                requestBody = setPolicyTerm(newJson, productVersionModel);
-            } catch (Exception e) {
-                errorModel.add(new ValidationError("activationDelay", "Error setting activation delay: " + e.getMessage(), "root"));
-                throw e;
-            }
+            requestBody = preProcessService.enrichPolicy(requestBody, productVersionModel);
             // Fill Key-Value pairs for LOB Variables
-            List<LobVar> lobVars = lobModel.getMpVars();
-
-            ObjectNode response = objectMapper.createObjectNode();
-
-            for (LobVar var : lobVars) {
-                if ("IN".equals(var.getVarType())) {
-                    try {
-                        String value = ctx.read(var.getVarPath());
-                        var.setVarValue(value == null ? "" : value);
-                    } catch (Exception e) {
-                        var.setVarValue("");
-                    }
-                }
-            }
-
-            for (LobVar var : lobVars) {
-                if ("MAGIC".equals(var.getVarType())) {
-                    var.setVarValue(getMagicValue(lobVars, var.getVarCode(), requestBody));
-                }
-            }
-
-            lobVars.add(new LobVar("product", "product", "product", "IN", productCode, VarDataType.STRING));
-            lobVars.add(new LobVar("packageCode", "package", "package", "IN", packageCode.toString(), VarDataType.STRING));
+            List<LobVar> lobVars = preProcessService.evaluateAndEnrichVariables(requestBody, lobModel, productCode);
 
             List<ValidatorRule> validatorRules = null;
 
@@ -219,6 +182,8 @@ public class ValidatorServiceImpl implements ValidatorService {
             }
 
             insObject = postProcessService.setCovers(insObject, lobVars);
+
+            JsonSetter setter = new JsonSetter(requestBody);
 
             setter.setObjectValue("insuredObject", insObject);
 
@@ -372,230 +337,6 @@ public class ValidatorServiceImpl implements ValidatorService {
 
         return insuredObject;
 
-    }
-
-
-    public String setActivationDelay(String policy, ProductVersionModel policyVersionModel) {
-
-        JsonProjection projection = new JsonProjection(policy);
-
-        String validatorType = policyVersionModel.getWaitingPeriod().getValidatorType();
-
-        String validatorValue = policyVersionModel.getWaitingPeriod().getValidatorValue();
-
-        ZonedDateTime issueDate = projection.getIssueDate();
-
-        ZonedDateTime startDate = projection.getStartDate();
-
-        String waitingPeriod = projection.getWaitingPeriod();
-
-        JsonSetter setter = new JsonSetter(policy);
-
-        if (issueDate == null) {
-            throw new IllegalAccessError("Issue date is required");
-        }
-        switch (validatorType) {
-            case "RANGE":
-                if (startDate == null) {
-                    throw new IllegalAccessError("Start date is required");
-                }
-
-                if (!PeriodUtils.isDateInRange(issueDate, startDate, validatorValue)) {
-                    throw new IllegalArgumentException("Activation delay is not in range");
-                }
-                setter.setRawValue("waitingPeriod", validatorValue);
-                break;
-            case "LIST":
-                // список доступных значений из модели полиса
-                // взять из договора policyTerm, проверить что это значение есть в списке. вычислить дату2
-                String[] list = validatorValue.split(",");
-                // если только одно значение, то только оно и возможно
-                if (list.length == 0) {
-                    throw new IllegalAccessError("validatorValue is invalid");
-                } else if (list.length == 1) {
-                    waitingPeriod = list[0];
-                } else {
-                    if (waitingPeriod == null) {
-                        throw new IllegalAccessError("Waiting period is required");
-                    }
-
-                    boolean found = false;
-                    // check if policyTerm is in list array. loop through list and check if policyTerm is in list
-                    for (String period : list) {
-                        if (waitingPeriod.equals(period.trim())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        throw new IllegalAccessError("Waiting period is not in list");
-                    }
-                }
-
-                startDate = issueDate.plus(Period.parse(waitingPeriod));
-
-                setter.setRawValue("startDate", startDate.toString());
-                setter.setRawValue("waitingPeriod", waitingPeriod);
-                break;
-            case "NEXT_MONTH":
-                startDate = issueDate.plus(Period.parse("P1M")).withDayOfMonth(1);
-                setter.setRawValue("startDate", startDate.toString());
-                break;
-        }
-
-        return setter.writeValue();
-    }
-
-    public String setPolicyTerm(String policy, ProductVersionModel policyVersionModel) {
-        // activationDelay - RANGE LIST NEXT_MONTH
-        String validatorType = policyVersionModel.getPolicyTerm().getValidatorType();
-        String validatorValue = policyVersionModel.getPolicyTerm().getValidatorValue();
-
-        var projection = new JsonProjection(policy);
-
-        ZonedDateTime startDate = projection.getStartDate();
-        ZonedDateTime endDate = projection.getEndDate();
-
-        String policyTerm = projection.getPolicyTerm();
-
-        JsonSetter setter = new JsonSetter(policy);
-
-        if (startDate == null) {
-            throw new BadRequestException("start date is required");
-        }
-
-        switch (validatorType) {
-            case "RANGE":
-                if (endDate == null) {
-                    throw new BadRequestException("End date is required");
-                }
-
-                if (!PeriodUtils.isDateInRange(startDate, endDate, validatorValue)) {
-                    throw new IllegalArgumentException("Activation delay is not in range");
-                }
-                setter.setRawValue("policyTerm", validatorValue);
-                break;
-            case "LIST":
-                // должно быть startDate и policyTerm в договоре и policyTerms в модели полиса
-                // список доступных значений из модели полиса
-                String[] list = validatorValue.split(",");
-                // если только одно значение, то только оно и возможно
-                if (list.length == 0) {
-                    throw new IllegalAccessError("validatorValue is invalid");
-                } else if (list.length == 1) {
-                    policyTerm = list[0];
-                } else {
-                    if (policyTerm == null) {
-                        throw new IllegalAccessError("Policy term is required");
-                    }
-
-                    boolean found = false;
-                    // check if policyTerm is in list array. loop through list and check if policyTerm is in list
-                    for (String period : list) {
-                        if (policyTerm.equals(period.trim())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        throw new IllegalArgumentException("Policy term is not in list");
-                    }
-                }
-
-                endDate = startDate.plus(Period.parse(policyTerm));
-
-                setter.setRawValue("endDate", endDate.toString());
-                setter.setRawValue("policyTerm", policyTerm);
-                break;
-        }
-
-        return policy;
-    }
-
-    public static String getMagicValue(List<LobVar> varDefs, String key, String policy) {
-        JsonProjection projection = new JsonProjection(policy);
-
-        LobVar varDef;
-        try {
-            switch (key) {
-                case "ph_isMale":
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_gender"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        return "M".equals(varDef.getVarValue()) ? "X" : "";
-                    }
-                    return "";
-                case "ph_isFemale":
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_gender"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        return "F".equals(varDef.getVarValue()) ? "X" : "";
-                    }
-                    return "";
-                case "ph_age_issue":
-
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_birthdate"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        LocalDate birthDate = LocalDate.parse(varDef.getVarValue());
-                        LocalDate issueDate = projection.getIssueDate().toLocalDate();
-                        return Integer.toString(Period.between(birthDate, issueDate).getYears());
-                    } else {
-                        return null;
-                    }
-                case "io_age_issue":
-                    try {
-                        varDef = varDefs.stream()
-                                .filter(v -> v.getVarCode().equals("io_birthDate"))
-                                .findFirst()
-                                .orElse(null);
-                        if (varDef != null) {
-                            return Integer.toString(
-                                    Period.between(
-                                            LocalDate.parse(varDef.getVarValue()), projection.getIssueDate().toLocalDate()
-                                    ).getYears()
-                            );
-                        }
-                    } catch (Exception e) {
-                        return "-1";
-                    }
-                    return "";
-                case "io_age_end":
-                    try {
-                        varDef = varDefs.stream()
-                                .filter(v -> v.getVarCode().equals("io_birthDate"))
-                                .findFirst()
-                                .orElse(null);
-                        if (varDef != null) {
-                            return Integer.toString(
-                                    Period.between(
-                                                    LocalDate.parse(varDef.getVarValue()), projection.getEndDate().toLocalDate())
-                                            .getYears()
-                            );
-                        }
-                        return "-1";
-                    } catch (Exception e) {
-                        return "-1";
-                    }
-                case "policyTermMonths":
-                    LocalDate st = projection.getStartDate().toLocalDate();
-                    LocalDate ed = projection.getEndDate().toLocalDate();
-                    Period p = Period.between(st, ed);
-                    int m = p.getYears() * 12 + p.getMonths();
-                    return Integer.toString(m);
-
-                default:
-                    return key + " Not Found";
-            }
-        } catch (Exception e) {
-            return "";
-        }
     }
 
     public PvLimit getPvLimit(PvCover pvCover, Double sumInsured) {

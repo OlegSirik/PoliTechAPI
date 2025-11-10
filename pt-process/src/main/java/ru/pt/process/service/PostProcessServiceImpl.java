@@ -21,6 +21,7 @@ public class PostProcessServiceImpl implements PostProcessService {
                 String premiumVarCode = cover.getCover().getCode() + "_Prem";
                 String deductibleNrVarCode = cover.getCover().getCode() + "_DedNr";
 
+                // TODO медленно, надо мапу передавать в метод
                 // Find values in lobVars
                 String sumInsured = calculatedValues.stream()
                         .filter(v -> sumInsuredVarCode.equals(v.getVarCode()))

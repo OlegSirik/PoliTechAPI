@@ -104,4 +104,8 @@ public class JsonProjection {
     public UUID getPolicyId() {
         return UUID.fromString(documentContext.read("$.draftId", String.class));
     }
+
+    public String evaluateJsonPath(String path) {
+        return documentContext.read(path, String.class);
+    }
 }
