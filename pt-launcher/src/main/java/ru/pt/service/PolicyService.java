@@ -252,6 +252,7 @@ public class PolicyService {
             policy.setInsuredObject(insObject);
 
             try {
+                // TODO не должно быть тут!!
                 String policyNumber = numberGeneratorService.getNextNumber(getMapVars(lobVars), productCode);
                 policy.setPolicyNumber(policyNumber);
                 lobVars.add(new LobVar("policyNumber", "Номер договора", "policy.policyNumber", "IN", policyNumber, VarDataType.STRING));
@@ -295,8 +296,8 @@ public class PolicyService {
         }
     }
 
-    public Map<String, String> getMapVars(List<LobVar> lobVars) {
-        Map<String, String> mapVars = new HashMap<>();
+    public Map<String, Object> getMapVars(List<LobVar> lobVars) {
+        Map<String, Object> mapVars = new HashMap<>();
         for (LobVar lobVar : lobVars) {
             mapVars.put(lobVar.getVarCode(), lobVar.getVarValue());
         }

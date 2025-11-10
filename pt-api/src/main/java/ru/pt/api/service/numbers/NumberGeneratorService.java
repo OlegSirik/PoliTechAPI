@@ -17,7 +17,7 @@ public interface NumberGeneratorService {
      * @param productCode код продукта
      * @return номер полиса(уникальный)
      */
-    String getNextNumber(Map<String, String> values, String productCode);
+    String getNextNumber(Map<String, Object> values, String productCode);
 
     /**
      * Создать новый алгоритм нумератора

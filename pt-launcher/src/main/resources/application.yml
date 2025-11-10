@@ -3,8 +3,8 @@ spring:
     name: pt-app
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/pt_db
-    username: postgres
-    password: postgres
+    username: spring
+    password: spring
     driver-class-name: org.postgresql.Driver
   jpa:
     show-sql: true

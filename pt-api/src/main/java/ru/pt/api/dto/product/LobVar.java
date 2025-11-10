@@ -23,7 +23,8 @@ public class LobVar {
     private String varValue = "";
 
     // Constructors
-    public LobVar() {}
+    public LobVar() {
+    }
 
     public LobVar(String varCode, String varName, String varPath, String varType, VarDataType varDataType) {
         this.varCode = varCode;
@@ -32,6 +33,7 @@ public class LobVar {
         this.varType = varType;
         this.varDataType = varDataType;
     }
+
     public LobVar(String varCode, String varName, String varPath, String varType, String varValue, VarDataType varDataType) {
         this.varCode = varCode;
         this.varName = varName;
@@ -90,4 +92,6 @@ public class LobVar {
     public void setVarDataType(VarDataType varDataType) {
         this.varDataType = varDataType;
     }
+
+
 }

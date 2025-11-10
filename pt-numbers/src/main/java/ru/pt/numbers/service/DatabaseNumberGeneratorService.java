@@ -28,7 +28,7 @@ public class DatabaseNumberGeneratorService implements NumberGeneratorService {
     }
 
     @Override
-    public String getNextNumber(Map<String, String> values, String productCode) {
+    public String getNextNumber(Map<String, Object> values, String productCode) {
         NumberGeneratorEntity ng = null;
         if (productCode != null && !productCode.isEmpty()) {
             ng = repository.findByProductCode(productCode)
@@ -70,7 +70,7 @@ public class DatabaseNumberGeneratorService implements NumberGeneratorService {
 
             } else {
                 // Get value from provided map
-                replacement = values.getOrDefault(key, "");
+                replacement = values.getOrDefault(key, "").toString();
             }
 
             replaceAll(resultMask, matcher.group(0), replacement);

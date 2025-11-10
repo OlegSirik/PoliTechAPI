@@ -9,16 +9,25 @@ import ru.pt.api.dto.db.PolicyIndex;
 import ru.pt.api.dto.db.PolicyStatus;
 import ru.pt.api.dto.exception.BadRequestException;
 import ru.pt.api.dto.payment.PaymentData;
+import ru.pt.api.dto.product.LobModel;
+import ru.pt.api.dto.product.LobVar;
 import ru.pt.api.dto.product.ProductVersionModel;
 import ru.pt.api.dto.versioning.Version;
+import ru.pt.api.service.calculator.CalculatorService;
 import ru.pt.api.service.db.StorageService;
 import ru.pt.api.service.numbers.NumberGeneratorService;
 import ru.pt.api.service.process.ProcessOrchestrator;
+import ru.pt.api.service.product.LobService;
 import ru.pt.api.service.product.ProductService;
 import ru.pt.api.service.product.VersionManager;
 import ru.pt.process.utils.JsonProjection;
+import ru.pt.process.utils.JsonSetter;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -29,31 +38,86 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
     private final NumberGeneratorService numberGeneratorService;
     private final ProductService productService;
     private final VersionManager versionManager;
+    private final CalculatorService calculatorService;
+    private final LobService lobService;
 
-    public ProcessOrchestratorService(StorageService storageService, NumberGeneratorService numberGeneratorService, ProductService productService, VersionManager versionManager) {
+    public ProcessOrchestratorService(StorageService storageService, NumberGeneratorService numberGeneratorService, ProductService productService, VersionManager versionManager, CalculatorService calculatorService, LobService lobService) {
         this.storageService = storageService;
         this.numberGeneratorService = numberGeneratorService;
         this.productService = productService;
         this.versionManager = versionManager;
+        this.calculatorService = calculatorService;
+        this.lobService = lobService;
     }
-    // TODO нужен модуль калькулятора
+
     @Override
     public String calculate(String policy) {
+        // TODO validator
 
         var projection = new JsonProjection(policy);
 
         var productCode = projection.getProductCode();
 
-        var version = versionManager.getLatestVersionByProductCode(productCode);
-
         var product = productService.getProductByCode(productCode, false);
-        // TODO доделать + проверить логику
-        return "";
+
+        LobModel lobModel = lobService.getByCode(productCode);
+
+        List<LobVar> vars = lobModel.getMpVars();
+
+        var packageCode = projection.getPackageCode();
+
+        List<LobVar> calculated = calculatorService.runCalculator(product.getId(), product.getVersionNo(), packageCode, vars);
+
+        Map<String, LobVar> calculatedMap = calculated.stream()
+                .collect(Collectors.toMap(LobVar::getVarCode, Function.identity()));
+
+        Map<String, LobVar> originalMap = vars.stream()
+                .collect(Collectors.toMap(LobVar::getVarCode, Function.identity()));
+
+        originalMap.forEach((k, v) -> originalMap.remove(k));
+
+        var setter = new JsonSetter(policy);
+
+        calculatedMap.forEach((k, v) ->
+                setter.set(v)
+        );
+
+        return setter.writeValue();
     }
 
     @Override
     public String save(String policy) {
-        return "";
+        // TODO validate
+
+        String calculated = calculate(policy);
+
+        var projection  = new JsonProjection(policy);
+
+        var productCode = projection.getProductCode();
+
+        LobModel lobModel = lobService.getByCode(productCode);
+
+        List<LobVar> vars = lobModel.getMpVars();
+
+        var paramMap = projection.getProductMap(vars);
+
+        var nextNumber = numberGeneratorService.getNextNumber(paramMap, productCode);
+
+        var setter = new JsonSetter(calculated);
+
+        setter.setRawValue("policyNumber", nextNumber);
+
+        var userData = (UserData) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        var product = productService.getProductByCode(productCode, false);
+
+        var version = new Version(null, product.getVersionNo());
+
+        storageService.save(policy, userData, version, projection.getPolicyId());
+
+        // TODO async send KID + draft print form
+
+        return setter.writeValue();
     }
 
     @Override
