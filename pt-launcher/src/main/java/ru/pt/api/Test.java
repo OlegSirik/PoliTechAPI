@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import ru.pt.api.service.process.ProcessOrchestrator;
 import ru.pt.domain.account.Account;
 import ru.pt.service.AccountService;
 import ru.pt.service.PolicyService;
@@ -28,12 +29,12 @@ import ru.pt.service.FileService;
 public class Test {
 
     private final AccountService accountService;
-    private final PolicyService policyService;
+    private final ProcessOrchestrator processOrchestrator;
     private final FileService fileService;
 
-    public Test(AccountService accountService, PolicyService policyService, FileService fileService) {
+    public Test(AccountService accountService, ProcessOrchestrator processOrchestrator, FileService fileService) {
         this.accountService = accountService;
-        this.policyService = policyService;
+        this.processOrchestrator = processOrchestrator;
         this.fileService = fileService;
     }
 
@@ -85,20 +86,21 @@ public class Test {
     //return response entity with result
 
     @PostMapping("/quote/validator")
-    public ResponseEntity<ObjectNode> quoteValidator(@RequestBody String requestBody) {
-        ObjectNode result = policyService.quoteValidator(requestBody);
+    public ResponseEntity<String> quoteValidator(@RequestBody String requestBody) {
+        String result = processOrchestrator.calculate(requestBody);
         return ResponseEntity.ok(result);
     }
     
     @PostMapping("/policy/validator")
-    public ResponseEntity<ObjectNode> saveValidator(@RequestBody String requestBody) {
-        ObjectNode result = policyService.saveValidator(requestBody);
+    public ResponseEntity<String> saveValidator(@RequestBody String requestBody) {
+        String result = processOrchestrator.save(requestBody);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/policy/printpf/{pf-type}")
     public byte[] printPolicy(@RequestBody String requestBody, @PathVariable("pf-type") String pfType) {
-        ObjectNode result = policyService.saveValidator(requestBody);
+        throw new IllegalStateException("Not implemented");
+       /* String result = processOrchestrator.save(requestBody);
         // get context from result
         ArrayNode context = (ArrayNode) result.get("context");
         Map<String, String> keyValues = new HashMap<>();
@@ -110,7 +112,7 @@ public class Test {
             keyValues.put(key, value);
         }
 
-        return fileService.getFile(pfType, keyValues);
+        return fileService.getFile(pfType, keyValues);*/
 
         //return null;
     }

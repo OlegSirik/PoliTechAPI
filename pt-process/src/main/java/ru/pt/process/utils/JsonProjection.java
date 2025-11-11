@@ -87,7 +87,7 @@ public class JsonProjection {
     }
 
     // код переменной -> значение переменной
-    public Map<String, Object> getProductMap(List<LobVar> vars) {
+    public Map<String, Object> getProductMapFromRequest(List<LobVar> vars) {
         var result = new HashMap<String, Object>();
         vars.forEach(v -> {
             switch (v.getVarDataType()) {
@@ -96,9 +96,16 @@ public class JsonProjection {
                 case TIME -> result.put(v.getVarCode(), documentContext.read(v.getVarPath(), LocalDateTime.class));
                 case NUMBER -> result.put(v.getVarCode(), documentContext.read(v.getVarPath(), BigDecimal.class));
             }
-            ;
         });
         return result;
+    }
+
+    public Map<String, Object> getProductMap(List<LobVar> vars) {
+        Map<String, Object> mapVars = new HashMap<>();
+        for (LobVar lobVar : vars) {
+            mapVars.put(lobVar.getVarCode(), lobVar.getVarValue());
+        }
+        return mapVars;
     }
 
     public UUID getPolicyId() {

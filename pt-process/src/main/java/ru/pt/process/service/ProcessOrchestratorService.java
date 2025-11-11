@@ -5,18 +5,23 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import ru.pt.api.dto.auth.UserData;
 import ru.pt.api.dto.db.PolicyData;
-import ru.pt.api.dto.db.PolicyIndex;
 import ru.pt.api.dto.db.PolicyStatus;
+import ru.pt.api.dto.errors.ValidationError;
 import ru.pt.api.dto.exception.BadRequestException;
 import ru.pt.api.dto.payment.PaymentData;
+import ru.pt.api.dto.process.Cover;
+import ru.pt.api.dto.process.InsuredObject;
+import ru.pt.api.dto.process.ValidatorType;
 import ru.pt.api.dto.product.LobModel;
 import ru.pt.api.dto.product.LobVar;
-import ru.pt.api.dto.product.ProductVersionModel;
 import ru.pt.api.dto.versioning.Version;
 import ru.pt.api.service.calculator.CalculatorService;
 import ru.pt.api.service.db.StorageService;
 import ru.pt.api.service.numbers.NumberGeneratorService;
+import ru.pt.api.service.process.PostProcessService;
+import ru.pt.api.service.process.PreProcessService;
 import ru.pt.api.service.process.ProcessOrchestrator;
+import ru.pt.api.service.process.ValidatorService;
 import ru.pt.api.service.product.LobService;
 import ru.pt.api.service.product.ProductService;
 import ru.pt.api.service.product.VersionManager;
@@ -24,9 +29,7 @@ import ru.pt.process.utils.JsonProjection;
 import ru.pt.process.utils.JsonSetter;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -40,19 +43,24 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
     private final VersionManager versionManager;
     private final CalculatorService calculatorService;
     private final LobService lobService;
+    private final ValidatorService validatorService;
+    private final PreProcessService preProcessService;
+    private final PostProcessService postProcessService;
 
-    public ProcessOrchestratorService(StorageService storageService, NumberGeneratorService numberGeneratorService, ProductService productService, VersionManager versionManager, CalculatorService calculatorService, LobService lobService) {
+    public ProcessOrchestratorService(StorageService storageService, NumberGeneratorService numberGeneratorService, ProductService productService, VersionManager versionManager, CalculatorService calculatorService, LobService lobService, ValidatorService validatorService, PreProcessService preProcessService, PostProcessService postProcessService) {
         this.storageService = storageService;
         this.numberGeneratorService = numberGeneratorService;
         this.productService = productService;
         this.versionManager = versionManager;
         this.calculatorService = calculatorService;
         this.lobService = lobService;
+        this.validatorService = validatorService;
+        this.preProcessService = preProcessService;
+        this.postProcessService = postProcessService;
     }
 
     @Override
     public String calculate(String policy) {
-        // TODO validator
 
         var projection = new JsonProjection(policy);
 
@@ -62,32 +70,44 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
 
         LobModel lobModel = lobService.getByCode(productCode);
 
-        List<LobVar> vars = lobModel.getMpVars();
+        policy = preProcessService.enrichPolicy(policy, product);
 
-        var packageCode = projection.getPackageCode();
+        List<LobVar> vars = preProcessService.evaluateAndEnrichVariables(policy, lobModel, productCode);
 
-        List<LobVar> calculated = calculatorService.runCalculator(product.getId(), product.getVersionNo(), packageCode, vars);
+        List<ValidationError> errors = validatorService.validate(ValidatorType.QUOTE, product, vars);
 
-        Map<String, LobVar> calculatedMap = calculated.stream()
-                .collect(Collectors.toMap(LobVar::getVarCode, Function.identity()));
+        if (!errors.isEmpty()) {
+            // TODO нормальную структуру под ошибки
+            throw new BadRequestException(errors.stream()
+                    .map(ValidationError::getReason)
+                    .collect(Collectors.joining(","))
+            );
+        }
 
-        Map<String, LobVar> originalMap = vars.stream()
-                .collect(Collectors.toMap(LobVar::getVarCode, Function.identity()));
+        InsuredObject insObject = preProcessService.getInsuredObject(policy, product);
 
-        originalMap.forEach((k, v) -> originalMap.remove(k));
+        preProcessService.enrichVariablesBeforeCalculation(insObject, vars);
+
+        List<LobVar> calculated = calculatorService.runCalculator(
+                product.getId(), product.getVersionNo(), insObject.getPackageCode(), vars
+        );
+
+        insObject = postProcessService.setCovers(insObject, calculated);
 
         var setter = new JsonSetter(policy);
 
-        calculatedMap.forEach((k, v) ->
-                setter.set(v)
-        );
+        setter.setObjectValue("insuredObject", insObject);
+
+        Double premium = countPremium(insObject);
+
+        setter.setRawValue("premium", premium.toString());
 
         return setter.writeValue();
     }
 
+
     @Override
     public String save(String policy) {
-        // TODO validate
 
         String calculated = calculate(policy);
 
@@ -95,9 +115,21 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
 
         var productCode = projection.getProductCode();
 
+        var product = productService.getProductByCode(productCode, false);
+
         LobModel lobModel = lobService.getByCode(productCode);
 
-        List<LobVar> vars = lobModel.getMpVars();
+        List<LobVar> vars = preProcessService.evaluateAndEnrichVariables(policy, lobModel, productCode);
+
+        List<ValidationError> errors = validatorService.validate(ValidatorType.SAVE, product, vars);
+
+        if (!errors.isEmpty()) {
+            // TODO нормальную структуру под ошибки
+            throw new BadRequestException(errors.stream()
+                    .map(ValidationError::getReason)
+                    .collect(Collectors.joining(","))
+            );
+        }
 
         var paramMap = projection.getProductMap(vars);
 
@@ -108,8 +140,6 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
         setter.setRawValue("policyNumber", nextNumber);
 
         var userData = (UserData) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        var product = productService.getProductByCode(productCode, false);
 
         var version = new Version(null, product.getVersionNo());
 
@@ -208,6 +238,17 @@ public class ProcessOrchestratorService implements ProcessOrchestrator {
         }
 
         return policyData;
+    }
+
+    private Double countPremium(InsuredObject insObject) {
+        Double premium = 0.0;
+
+        for (Cover cover : insObject.getCovers()) {
+            if (cover.getPremium() != null) {
+                premium += cover.getPremium();
+            }
+        }
+        return premium;
     }
 
 }

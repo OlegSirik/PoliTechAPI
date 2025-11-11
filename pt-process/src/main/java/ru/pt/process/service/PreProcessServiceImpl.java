@@ -2,18 +2,19 @@ package ru.pt.process.service;
 
 import org.springframework.stereotype.Component;
 import ru.pt.api.dto.exception.BadRequestException;
-import ru.pt.api.dto.product.LobModel;
-import ru.pt.api.dto.product.LobVar;
-import ru.pt.api.dto.product.ProductVersionModel;
-import ru.pt.api.dto.product.VarDataType;
+import ru.pt.api.dto.process.Cover;
+import ru.pt.api.dto.process.CoverInfo;
+import ru.pt.api.dto.process.InsuredObject;
+import ru.pt.api.dto.product.*;
 import ru.pt.api.service.process.PreProcessService;
 import ru.pt.process.utils.JsonProjection;
 import ru.pt.process.utils.JsonSetter;
 import ru.pt.process.utils.PeriodUtils;
+import ru.pt.process.utils.VariablesService;
 
-import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -61,7 +62,7 @@ public class PreProcessServiceImpl implements PreProcessService {
 
         for (LobVar var : lobVars) {
             if ("MAGIC".equals(var.getVarType())) {
-                var.setVarValue(getMagicValue(lobVars, var.getVarCode(), policy));
+                var.setVarValue(VariablesService.getMagicValue(lobVars, var.getVarCode(), policy));
             }
         }
 
@@ -70,90 +71,134 @@ public class PreProcessServiceImpl implements PreProcessService {
         return lobVars;
     }
 
-    public static String getMagicValue(List<LobVar> varDefs, String key, String policy) {
+    @Override
+    public void enrichVariablesBeforeCalculation(InsuredObject insObject, List<LobVar> lobVars) {
+        if (insObject != null && insObject.getCovers() != null) {
+            for (Cover cover : insObject.getCovers()) {
+                if (cover.getCover() != null) {
+                    Double sumInsured = cover.getSumInsured();
+                    Double premium = cover.getPremium();
+
+                    String sumInsuredVarCode = cover.getCover().getCode() + "_SumIns";
+                    String premiumVarCode = cover.getCover().getCode() + "_Prem";
+
+                    LobVar lobVar = new LobVar();
+                    lobVar.setVarCode(sumInsuredVarCode);
+                    lobVar.setVarValue(sumInsured != null ? sumInsured.toString() : null);
+                    lobVar.setVarType("VAR");
+                    lobVars.add(lobVar);
+
+                    lobVar = new LobVar();
+                    lobVar.setVarCode(premiumVarCode);
+                    lobVar.setVarValue(premium != null ? premium.toString() : null);
+                    lobVar.setVarType("VAR");
+                    lobVars.add(lobVar);
+                }
+            }
+        }
+    }
+
+    @Override
+    public InsuredObject getInsuredObject(String policy, ProductVersionModel productVersionModel) {
         JsonProjection projection = new JsonProjection(policy);
 
-        LobVar varDef;
-        try {
-            switch (key) {
-                case "ph_isMale":
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_gender"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        return "M".equals(varDef.getVarValue()) ? "X" : "";
-                    }
-                    return "";
-                case "ph_isFemale":
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_gender"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        return "F".equals(varDef.getVarValue()) ? "X" : "";
-                    }
-                    return "";
-                case "ph_age_issue":
+        var insuredObject = projection.getInsuredObject();
 
-                    varDef = varDefs.stream()
-                            .filter(v -> v.getVarCode().equals("ph_birthdate"))
-                            .findFirst()
-                            .orElse(null);
-                    if (varDef != null) {
-                        LocalDate birthDate = LocalDate.parse(varDef.getVarValue());
-                        LocalDate issueDate = projection.getIssueDate().toLocalDate();
-                        return Integer.toString(Period.between(birthDate, issueDate).getYears());
-                    } else {
-                        return null;
-                    }
-                case "io_age_issue":
-                    try {
-                        varDef = varDefs.stream()
-                                .filter(v -> v.getVarCode().equals("io_birthDate"))
-                                .findFirst()
-                                .orElse(null);
-                        if (varDef != null) {
-                            return Integer.toString(
-                                    Period.between(
-                                            LocalDate.parse(varDef.getVarValue()), projection.getIssueDate().toLocalDate()
-                                    ).getYears()
-                            );
-                        }
-                    } catch (Exception e) {
-                        return "-1";
-                    }
-                    return "";
-                case "io_age_end":
-                    try {
-                        varDef = varDefs.stream()
-                                .filter(v -> v.getVarCode().equals("io_birthDate"))
-                                .findFirst()
-                                .orElse(null);
-                        if (varDef != null) {
-                            return Integer.toString(
-                                    Period.between(
-                                                    LocalDate.parse(varDef.getVarValue()), projection.getEndDate().toLocalDate())
-                                            .getYears()
-                            );
-                        }
-                        return "-1";
-                    } catch (Exception e) {
-                        return "-1";
-                    }
-                case "policyTermMonths":
-                    LocalDate st = projection.getStartDate().toLocalDate();
-                    LocalDate ed = projection.getEndDate().toLocalDate();
-                    Period p = Period.between(st, ed);
-                    int m = p.getYears() * 12 + p.getMonths();
-                    return Integer.toString(m);
-
-                default:
-                    return key + " Not Found";
-            }
-        } catch (Exception e) {
-            return "";
+        if (insuredObject == null || insuredObject.getCovers() == null) {
+            var emptyInsuredObject = new InsuredObject();
+            emptyInsuredObject.setCovers(new ArrayList<>());
+            insuredObject = emptyInsuredObject;
         }
+        Integer inPackageNo;
+        if (insuredObject.getPackageCode() == null) {
+            inPackageNo = 0;
+        } else {
+            inPackageNo = insuredObject.getPackageCode();
+        }
+        final Integer pkgCode = inPackageNo;
+
+        PvPackage pvPackage = productVersionModel.getPackages().stream()
+                .filter(p -> p.getCode().equals(pkgCode))
+                .findFirst()
+                .orElse(null);
+
+        if (pvPackage == null) {
+            throw new IllegalArgumentException("Package not found: " + inPackageNo);
+        }
+
+        insuredObject.setPackageCode(pkgCode);
+
+        List<PvCover> covers = pvPackage.getCovers();
+        for (PvCover pvCover : covers) {
+            // Check if the cover.code exists in policy.covers
+            List<Cover> policyCovers = insuredObject.getCovers();
+            boolean coverExists = false;
+            if (policyCovers != null) {
+                for (Cover policyCover : policyCovers) {
+                    if (policyCover != null && policyCover.getCover() != null && pvCover.getCode().equals(policyCover.getCover().getCode())) {
+                        coverExists = true;
+                        break;
+                    }
+                }
+            }
+            if (!coverExists && pvCover.getIsMandatory()) {
+                Cover newCover = new Cover();
+                newCover.setCover(new CoverInfo(pvCover.getCode(), "", ""));
+                coverExists = true;
+                insuredObject.getCovers().add(newCover);
+            }
+            if (coverExists) {
+                Cover policyCover = policyCovers.stream()
+                        .filter(c -> c.getCover() != null && c.getCover().getCode().equals(pvCover.getCode()))
+                        .findFirst()
+                        .orElse(null);
+                if (policyCover != null) {
+                    String waitingPeriod = pvCover.getWaitingPeriod();
+                    if (waitingPeriod != null && !waitingPeriod.isEmpty()) {
+                        ZonedDateTime startDate = projection.getStartDate().plus(Period.parse(waitingPeriod));
+                        policyCover.setStartDate(startDate);
+                    } else {
+                        policyCover.setStartDate(projection.getStartDate());
+                    }
+                    String coverageTerm = pvCover.getCoverageTerm();
+                    if (coverageTerm != null && !coverageTerm.isEmpty()) {
+                        ZonedDateTime endDate = policyCover.getStartDate().plus(Period.parse(coverageTerm));
+                        policyCover.setEndDate(endDate);
+                    } else {
+                        policyCover.setEndDate(projection.getEndDate());
+                    }
+
+
+                    PvLimit pvLimit = VariablesService.getPvLimit(pvCover, policyCover.getSumInsured());
+                    if (pvLimit != null) {
+                        policyCover.setSumInsured(pvLimit.getSumInsured());
+                        policyCover.setPremium(pvLimit.getPremium());
+                    }
+
+                    policyCover.setDeductibleCur(null);
+                    policyCover.setDeductibleMin(null);
+                    policyCover.setDeductiblePercent(null);
+
+
+                    PvDeductible pvDeductible = VariablesService.getPvDeductible(pvCover, policyCover);
+                    if (pvDeductible != null) {
+                        policyCover.setDeductible(pvDeductible.getDeductible());
+                        policyCover.setDeductibleType(pvDeductible.getDeductibleType());
+                        policyCover.setDeductibleSpecific(pvDeductible.getDeductibleSpecific());
+                        policyCover.setDeductibleUnit(pvDeductible.getDeductibleUnit());
+                    } else {
+                        policyCover.setDeductible(null);
+                        policyCover.setDeductibleType(null);
+                        policyCover.setDeductibleSpecific(null);
+                        policyCover.setDeductibleUnit(null);
+                    }
+
+                    policyCover.setCover(new CoverInfo(pvCover.getCode(), "", ""));
+                }
+            }
+        }
+
+        return insuredObject;
     }
 
 
