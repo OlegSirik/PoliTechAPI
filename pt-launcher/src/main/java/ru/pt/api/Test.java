@@ -1,7 +1,5 @@
 package ru.pt.api;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 // INSERT_YOUR_CODE
@@ -14,15 +12,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import ru.pt.api.dto.auth.Account;
+import ru.pt.api.service.auth.AccountService;
+import ru.pt.api.service.file.FileService;
 import ru.pt.api.service.process.ProcessOrchestrator;
-import ru.pt.domain.account.Account;
-import ru.pt.service.AccountService;
-import ru.pt.service.PolicyService;
-import ru.pt.service.FileService;
+
 
 @RestController
 @RequestMapping("/test")

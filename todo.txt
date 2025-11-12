@@ -10,5 +10,6 @@
 10. Private docker registry + licence server*(check for expiration + payments)
 11. API for long-term keeping policies + business reports
 12. Вставить покрытия по коду пакета
+13. Копирование переменных с лоба на продукт(?) - в случае редактирования лоба разваливаются продукты
 
 16 оперативы + пара ядер

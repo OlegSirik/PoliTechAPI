@@ -17,7 +17,7 @@ POST /api/auth/register
 }
 
 ### 3. Login with Local Account
-POST /api/auth/login
+POST /api/auth/loginEntity
 {
   "username": "testuser", 
   "password": "password123"
@@ -55,15 +55,15 @@ Add these environment variables or application.yml:
 spring:
   security:
     oauth2:
-      client:
+      clientEntity:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
-            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-secret}
+            clientEntity-id: ${GOOGLE_CLIENT_ID:your-google-clientEntity-id}
+            clientEntity-secret: ${GOOGLE_CLIENT_SECRET:your-google-secret}
             scope: openid,profile,email
         provider:
           google:
-            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            authorization-uri: https://accountEntities.google.com/o/oauth2/auth
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
             user-name-attribute: id
@@ -74,16 +74,16 @@ spring:
 spring:
   security:
     oauth2:
-      client:
+      clientEntity:
         registration:
           github:
-            client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
-            client-secret: ${GITHUB_CLIENT_SECRET:your-github-secret}
+            clientEntity-id: ${GITHUB_CLIENT_ID:your-github-clientEntity-id}
+            clientEntity-secret: ${GITHUB_CLIENT_SECRET:your-github-secret}
             scope: user:email,read:user
         provider:
           github:
-            authorization-uri: https://github.com/login/oauth/authorize
-            token-uri: https://github.com/login/oauth/access_token
+            authorization-uri: https://github.com/loginEntity/oauth/authorize
+            token-uri: https://github.com/loginEntity/oauth/access_token
             user-info-uri: https://api.github.com/user
 ```
 
@@ -98,7 +98,7 @@ spring:
 ## 🛡️ API Security Configuration
 
 ### Public Endpoints (No Authentication Required)
-- POST /api/auth/login
+- POST /api/auth/loginEntity
 - POST /api/auth/register
 - GET /oauth2/authorization/*
 - GET /oauth2/success
@@ -154,7 +154,7 @@ Invalid/expired tokens return 401 Unauthorized.
 
 Tables created by migration V4:
 - auth_roles: Application roles (ADMIN, USER, MODERATOR)
-- auth_users: User accounts (local + external OAuth2)
+- auth_users: User accountEntities (local + external OAuth2)
 - auth_user_roles: Many-to-many user-role mapping
 
 ## 🚦 Testing Examples
@@ -169,7 +169,7 @@ curl -X POST http://localhost:8080/api/auth/register \
   }'
 
 ### Login and Get Token
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/loginEntity \
   -H "Content-Type: application/json" \
   -d '{
     "username": "newuser",

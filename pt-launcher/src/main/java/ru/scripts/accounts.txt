@@ -5,7 +5,7 @@ node_type char(10) not null,
 
 updated_at timestamp )
 
-create entity account for the table row in package domain.account
+create entity accountEntity for the table row in package domain.accountEntity
 
 create table acc_product_roles ( 
 account_id number
@@ -16,7 +16,7 @@ updated_at timestamp)
 
 uniqe constraint account_id, role_product_id, role_account_id
 
-create entity account_product for the table row in package domain.account
+create entity account_product for the table row in package domain.accountEntity
 
 create table account_roles (
     account_id number
@@ -26,17 +26,17 @@ create table account_roles (
 
 uniqe constraint account_id, role
 
-create entity account_role for the table row in package domain.account
+create entity account_role for the table row in package domain.accountEntity
 
 table account_logins (
-    login string,
-    client string,
+    loginEntity string,
+    clientEntity string,
     account_id number
 )
 
-uniqe constraint login, client
+uniqe constraint loginEntity, clientEntity
 
-create entity acc_login for the table row in package domain.account
+create entity acc_login for the table row in package domain.accountEntity
 
 table account_tokens (
     token string,
@@ -45,18 +45,18 @@ table account_tokens (
 
 uniqe constraint token
 
-create entity acc_token for the table row in package domain.account
+create entity acc_token for the table row in package domain.accountEntity
 
 create repositories for all tables
 
 create service for create, update, delete, get for all tables
 
-create entity accountModel by the json  in package domain.account
+create entity accountModel by the json  in package domain.accountEntity
 acc_accounts
 {
     "account_id": 123,
     "parent_id": 123,
-    "client": "QWE",
+    "clientEntity": "QWE",
     "account_type": "USER",
     "products": [
         {

@@ -5,9 +5,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ru.pt.domain.FileEntity;
-import ru.pt.service.FileService;
+import ru.pt.api.dto.file.FileModel;
+import ru.pt.api.service.file.FileService;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public class AdminFileController {
         String fileDesc = body.get("fileDescription");
         String productCode = body.get("productCode");
         Integer packageCode = Integer.parseInt(body.get("packageCode"));
-        FileEntity e = fileService.createMeta(fileType, fileDesc, productCode, packageCode);
+        FileModel e = fileService.createMeta(fileType, fileDesc, productCode, packageCode);
 
         body.put("id", String.valueOf(e.getId()));
         return ResponseEntity.ok(body);
@@ -37,7 +38,11 @@ public class AdminFileController {
     // POST /admin/files/{id} multipart file upload
     @PostMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> upload(@PathVariable("id") Long id, @RequestPart("file") MultipartFile file) {
-        fileService.uploadBody(id, file);
+        try {
+            fileService.uploadBody(id, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return ResponseEntity.noContent().build();
     }
 

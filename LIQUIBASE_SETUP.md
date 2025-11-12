@@ -26,13 +26,13 @@ src/main/resources/
         ├── db.changelog-master.xml         # Master changelog file
         └── changes/
             ├── v1-initial-schema.xml       # Initial database schema
-            └── v3-account-tables.xml       # Account management tables
+            └── v3-accountEntity-tables.xml       # Account management tables
 ```
 
 ### 4. Files Created
 - **db.changelog-master.xml**: Master changelog that includes all changesets
 - **v1-initial-schema.xml**: Initial database schema (tables, sequences, indexes)
-- **v3-account-tables.xml**: Account management system tables
+- **v3-accountEntity-tables.xml**: Account management system tables
 - **liquibase.properties**: Configuration for Maven plugin
 
 ### 5. Files Modified

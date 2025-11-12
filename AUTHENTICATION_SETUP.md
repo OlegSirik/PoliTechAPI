@@ -9,14 +9,14 @@
 - **Role-based Authorization**: ADMIN, USER, MODERATOR roles with granular permissions
 
 ### ✅ Local Identity Provider
-- **User Registration**: Create accounts with username/email/password
+- **User Registration**: Create accountEntities with username/email/password
 - **Authentication**: Login with credentials
 - **Password Management**: Change password functionality
 - **Profile Management**: Update user information
 
 ### ✅ External Identity Provider Support
-- **Google OAuth2**: Full integration with Google accounts
-- **GitHub OAuth2**: GitHub account authentication
+- **Google OAuth2**: Full integration with Google accountEntities
+- **GitHub OAuth2**: GitHub accountEntity authentication
 - **Keycloak Support**: Can be easily added
 - **Custom OAuth2**: Extensible for any OAuth2 provider
 
@@ -51,7 +51,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ### 3. Login and Get Token
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/loginEntity \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -61,7 +61,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ### 4. Use Authenticated Endpoints
 ```bash
-# Add the token from login response to Authorization header
+# Add the token from loginEntity response to Authorization header
 curl -X GET http://localhost:8080/api/auth/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
 ```
@@ -72,9 +72,9 @@ curl -X GET http://localhost:8080/api/auth/profile \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/register` | Register new local user |
-| POST | `/api/auth/login` | Login with credentials |
-| GET | `/oauth2/authorization/google` | Google OAuth2 login |
-| GET | `/oauth2/authorization/github` | GitHub OAuth2 login |
+| POST | `/api/auth/loginEntity` | Login with credentials |
+| GET | `/oauth2/authorization/google` | Google OAuth2 loginEntity |
+| GET | `/oauth2/authorization/github` | GitHub OAuth2 loginEntity |
 
 ### Protected Endpoints (Auth Required)
 | Method | Endpoint | Description | Access Level |
@@ -106,8 +106,8 @@ curl -X GET http://localhost:8080/api/auth/profile \
 
 2. **Configure Environment Variables**:
    ```bash
-   export GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-   export GOOGLE_CLIENT_SECRET="your-client-secret"
+   export GOOGLE_CLIENT_ID="your-clientEntity-id.apps.googleusercontent.com"
+   export GOOGLE_CLIENT_SECRET="your-clientEntity-secret"
    ```
 
 3. **Uncomment Google Configuration** in `application.yml`
@@ -126,8 +126,8 @@ curl -X GET http://localhost:8080/api/auth/profile \
 
 2. **Configure Environment Variables**:
    ```bash
-   export GITHUB_CLIENT_ID="your-github-client-id"
-   export GITHUB_CLIENT_SECRET="your-github-client-secret"
+   export GITHUB_CLIENT_ID="your-github-clientEntity-id"
+   export GITHUB_CLIENT_SECRET="your-github-clientEntity-secret"
    ```
 
 3. **Uncomment GitHub Configuration** in `application.yml`
@@ -140,7 +140,7 @@ curl -X GET http://localhost:8080/api/auth/profile \
 ### OAuth2 Flow Example
 
 1. User visits: `http://localhost:8080/oauth2/authorization/google`
-2. Redirected to Google login page
+2. Redirected to Google loginEntity page
 3. User authenticates with Google
 4. Google redirects back with authorization code
 5. System exchanges code for access token
@@ -171,7 +171,7 @@ export JWT_EXPIRATION=3600000  # 1 hour
 ### Database Configuration
 Authentication system uses existing PostgreSQL database with new tables:
 - `auth_roles`: Application roles
-- `auth_users`: User accounts (local + OAuth2)
+- `auth_users`: User accountEntities (local + OAuth2)
 - `auth_user_roles`: User-role associations
 
 ## 🗃️ Database Schema
@@ -239,7 +239,7 @@ CREATE TABLE auth_user_roles (
 3. **Login and Test Protected Endpoint**:
    ```bash
    # Login
-   TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+   TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/loginEntity \
      -H "Content-Type: application/json" \
      -d '{"username":"test","password":"test123"}' | jq -r .token)
    
@@ -253,8 +253,8 @@ CREATE TABLE auth_user_roles (
 **JavaScript/Axios Example**:
 ```javascript
 // Login and store token
-const login = async (credentials) => {
-  const response = await axios.post('/api/auth/login', credentials);
+const loginEntity = async (credentials) => {
+  const response = await axios.post('/api/auth/loginEntity', credentials);
   localStorage.setItem('token', response.data.token);
 }
 
@@ -274,7 +274,7 @@ const Login = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   
   const handleLogin = async (credentials) => {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch('/api/auth/loginEntity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
@@ -333,7 +333,7 @@ curl -X POST http://localhost:8080/api/auth/refresh \
 ```
 
 **3. OAuth2 Provider Not Working**
-- Check client ID/secret configuration
+- Check clientEntity ID/secret configuration
 - Verify redirect URIs match exactly
 - Ensure provider is enabled in application.yml
 

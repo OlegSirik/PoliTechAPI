@@ -27,7 +27,7 @@ This document describes the migration from Flyway to Liquibase that was complete
 - `src/main/resources/liquibase.properties` - Maven plugin configuration
 - `src/main/resources/db/changelog/db.changelog-master.xml` - Master changelog
 - `src/main/resources/db/changelog/changes/v1-initial-schema.xml` - Converted from V1__Initial_schema.sql
-- `src/main/resources/db/changelog/changes/v3-account-tables.xml` - Converted from V3__Create_account_tables.sql
+- `src/main/resources/db/changelog/changes/v3-accountEntity-tables.xml` - Converted from V3__Create_account_tables.sql
 - `LIQUIBASE_SETUP.md` - Complete Liquibase documentation
 
 ### 3. Migration Files Structure
@@ -46,7 +46,7 @@ src/main/resources/db/changelog/
 ├── db.changelog-master.xml
 └── changes/
     ├── v1-initial-schema.xml
-    └── v3-account-tables.xml
+    └── v3-accountEntity-tables.xml
 ```
 
 ## Benefits of This Migration
