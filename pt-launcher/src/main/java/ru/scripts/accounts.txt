@@ -1,0 +1,108 @@
+create table acc_accounts (
+id number, 
+parent_id number foreign key to id, 
+node_type char(10) not null,
+
+updated_at timestamp )
+
+create entity accountEntity for the table row in package domain.accountEntity
+
+create table acc_product_roles ( 
+account_id number
+role_product_id number
+role_account_id number
+can_read boolean, car_quote boolean, can_policy boolean, can_addendum boolean, can_cancel boolean, can_prolongate boolean,
+updated_at timestamp)
+
+uniqe constraint account_id, role_product_id, role_account_id
+
+create entity account_product for the table row in package domain.accountEntity
+
+create table account_roles (
+    account_id number
+    role char(50),
+    attributes: jsonb
+)
+
+uniqe constraint account_id, role
+
+create entity account_role for the table row in package domain.accountEntity
+
+table account_logins (
+    loginEntity string,
+    clientEntity string,
+    account_id number
+)
+
+uniqe constraint loginEntity, clientEntity
+
+create entity acc_login for the table row in package domain.accountEntity
+
+table account_tokens (
+    token string,
+    account_id number
+)
+
+uniqe constraint token
+
+create entity acc_token for the table row in package domain.accountEntity
+
+create repositories for all tables
+
+create service for create, update, delete, get for all tables
+
+create entity accountModel by the json  in package domain.accountEntity
+acc_accounts
+{
+    "account_id": 123,
+    "parent_id": 123,
+    "clientEntity": "QWE",
+    "account_type": "USER",
+    "products": [
+        {
+            "code": "product1",
+            "can_read": true,
+            "can_quote": true,
+            "can_policy": true,
+            "can_cancel": false,
+            "can_prolongate": flse,
+            "can_addendum": false
+        }
+    ],
+    "roles": [
+        {
+            "code": "SALES"
+        },
+        {
+            "code": "ADMIN_GROUP",
+            "groups":[123, 345, 323, 322]
+        }
+    ]
+}
+
+Пересобрать продуктовые роли
+
+-- Рекурсивный UPDATE
+WITH RECURSIVE category_levels AS (
+    -- Базовый случай: корневые элементы (level = 0)
+    SELECT 
+        id,
+        parent_id,
+        0 as calculated_level
+    FROM categories 
+    WHERE parent_id IS NULL
+    
+    UNION ALL
+    
+    -- Рекурсивный случай: дочерние элементы (level + 1)
+    SELECT 
+        c.id,
+        c.parent_id,
+        cl.calculated_level + 1
+    FROM categories c
+    JOIN category_levels cl ON c.parent_id = cl.id
+)
+UPDATE categories 
+SET level = cl.calculated_level
+FROM category_levels cl
+WHERE categories.id = cl.id;

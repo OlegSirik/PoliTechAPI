@@ -1,0 +1,202 @@
+JWT Authentication System - Usage Examples
+
+## 🚀 Quick Start
+
+### 1. Enable Default Roles
+After application startup, default roles will be created automatically:
+- ADMIN: System administrator
+- USER: Default user role  
+- MODERATOR: Content moderator
+
+### 2. Register Local User
+POST /api/auth/register
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 3. Login with Local Account
+POST /api/auth/loginEntity
+{
+  "username": "testuser", 
+  "password": "password123"
+}
+
+Response:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "user": {
+    "id": 1,
+    "username": "testuser",
+    "email": "test@example.com",
+    "fullName": "test user",
+    "provider": "LOCAL",
+    "isExternal": false,
+    "createdAt": "2025-10-01T15:30:00"
+  }
+}
+
+### 4. Authenticated Requests
+Add token to header: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+GET /api/auth/profile  - Get current user profile
+PUT /api/auth/profile  - Update user profile  
+POST /api/auth/change-password - Change password
+POST /api/auth/refresh - Refresh JWT token
+
+## 🌐 OAuth2 External Identity Providers
+
+### Google OAuth2 Setup
+Add these environment variables or application.yml:
+
+```yaml
+spring:
+  security:
+    oauth2:
+      clientEntity:
+        registration:
+          google:
+            clientEntity-id: ${GOOGLE_CLIENT_ID:your-google-clientEntity-id}
+            clientEntity-secret: ${GOOGLE_CLIENT_SECRET:your-google-secret}
+            scope: openid,profile,email
+        provider:
+          google:
+            authorization-uri: https://accountEntities.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            user-name-attribute: id
+```
+
+### GitHub OAuth2 Setup
+```yaml
+spring:
+  security:
+    oauth2:
+      clientEntity:
+        registration:
+          github:
+            clientEntity-id: ${GITHUB_CLIENT_ID:your-github-clientEntity-id}
+            clientEntity-secret: ${GITHUB_CLIENT_SECRET:your-github-secret}
+            scope: user:email,read:user
+        provider:
+          github:
+            authorization-uri: https://github.com/loginEntity/oauth/authorize
+            token-uri: https://github.com/loginEntity/oauth/access_token
+            user-info-uri: https://api.github.com/user
+```
+
+### OAuth2 Login URLs
+- Google: http://localhost:8080/oauth2/authorization/google
+- GitHub: http://localhost:8080/oauth2/authorization/github
+
+### OAuth2 Success/Failure URLs
+- Success: http://localhost:8080/oauth2/success?token=JWT_TOKEN_HERE
+- Failure: http://localhost:8080/oauth2/failure
+
+## 🛡️ API Security Configuration
+
+### Public Endpoints (No Authentication Required)
+- POST /api/auth/loginEntity
+- POST /api/auth/register
+- GET /oauth2/authorization/*
+- GET /oauth2/success
+- GET /oauth2/failure
+- GET /health
+
+### User Endpoints (Require Authentication)
+- GET /api/** - Read access for authenticated users
+- GET /api/test/** - Test endpoints for authenticated users
+
+### Moderator Endpoints (Require MODERATOR or ADMIN Role)
+- POST /api/test/** - Create/modify test data
+- PUT /api/test/** - Update test data
+
+### Admin Endpoints (Require ADMIN Role)
+- GET /api/admin/** - Admin dashboard
+- DELETE /api/test/** - Delete test data
+
+## 🔧 JWT Configuration
+
+Configure JWT settings in application.yml:
+
+```yaml
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+```
+
+For production, generate a strong secret:
+openssl rand -base64 64
+
+## 🔑 Token Management
+
+### Token Format
+JWT tokens contain:
+- sub: username/email
+- provider: LOCAL, GOOGLE, GITHUB, etc.
+- roles: comma-separated roles
+- iat: issued at timestamp
+- exp: expiration timestamp
+
+### Token Refresh
+POST /api/auth/refresh
+Headers: Authorization: Bearer CURRENT_TOKEN
+
+Returns new token with extended expiration.
+
+### Token Validation
+All authenticated requests automatically validate the JWT token.
+Invalid/expired tokens return 401 Unauthorized.
+
+## 🗄️ Database Schema
+
+Tables created by migration V4:
+- auth_roles: Application roles (ADMIN, USER, MODERATOR)
+- auth_users: User accountEntities (local + external OAuth2)
+- auth_user_roles: Many-to-many user-role mapping
+
+## 🚦 Testing Examples
+
+### Register New User
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newuser",
+    "email": "new@example.com", 
+    "password": "secure123"
+  }'
+
+### Login and Get Token
+curl -X POST http://localhost:8080/api/auth/loginEntity \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newuser",
+    "password": "secure123"
+  }'
+
+### Authenticated Request
+curl -X GET http://localhost:8080/api/auth/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+### OAuth2 Redirect Test
+Open in browser: http://localhost:8080/oauth2/authorization/google
+
+## 🛠️ Development Setup
+
+1. Start application
+2. Database migrations will create auth tables automatically
+3. Default roles created on first startup
+4. Configure OAuth2 providers in application.yml
+5. Restart application to apply OAuth2 configuration
+
+## 🔒 Security Best Practices
+
+- Use strong JWT secrets in production
+- Implement token refresh mechanism
+- Set appropriate JWT expiration times
+- Use HTTPS in production
+- Validate all OAuth2 providers properly
+- Implement rate limiting for auth endpoints
+- Log authentication attempts for monitoring

@@ -18,7 +18,7 @@ All Maven dependencies successfully converted to Gradle:
 - `spring-boot-starter-data-jpa`
 - `spring-boot-starter-validation`
 - `spring-boot-starter-security`
-- `spring-boot-starter-oauth2-client`
+- `spring-boot-starter-oauth2-clientEntity`
 
 **Security & JWT:**
 - `jjwt-api`, `jjwt-impl`, `jjwt-jackson` (version 0.12.3)
